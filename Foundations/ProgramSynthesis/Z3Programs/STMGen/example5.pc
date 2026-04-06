@@ -1,0 +1,19 @@
+
+int parse(){
+    Extract(field0,4);
+    if (field0==2){
+        Extract(field1,1);
+        if(field1==1){
+            Extract(field2,2);
+        }
+        else{
+            Extract(field3,2);
+        }
+    }
+    else if(field0==5){
+        Extract(field2,2);
+        Extract(field3,2);
+    }
+    Extract(field4,1);
+    return ACCEPT;
+}

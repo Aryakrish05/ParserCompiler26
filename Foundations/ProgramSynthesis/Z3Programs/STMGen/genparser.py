@@ -2,7 +2,7 @@ from z3 import *
 from enum import Enum
 
 #We shall make an assumption that the packet is in little endian
-#Standard followed across both stm_generator and stm_verifier: 
+#Standard followed across both STMGenerator and STMVerifier: 
     #start state is 0
     #accept state is no_states
     #reject state is no_states+1
@@ -16,7 +16,7 @@ class OrderingType(Enum):
     FIELD_ORDERING = 2
     FIELD_FIXING = 3
     
-class stm_solver:
+class STMSolver:
     
     def __init__(self,table_size,no_states,no_fields,max_packet_size,max_field_size):
         
@@ -49,7 +49,7 @@ class stm_solver:
         return self.solver.check()==sat
     
         
-class stm_generator(stm_solver):
+class STMGenerator(STMSolver):
     
     def __init__(self,table_size,no_states,no_fields,max_packet_size,max_field_size,ordering_type):
         
@@ -67,7 +67,7 @@ class stm_generator(stm_solver):
         #domain constraints
         for i in range(table_size):
             constraints.append(And(self.entry_state[i]>=0,self.entry_state[i]<no_states))
-            constraints.append(self.entry_next_state[i]<=no_states+1)
+            constraints.append(And(self.entry_next_state[i]<=no_states+1,self.entry_next_state[i]>=0))
 
         for i in range(no_states):
             constraints.append(self.default_next_state[i]<=no_states+1)
@@ -222,7 +222,7 @@ class stm_generator(stm_solver):
             default_next_state.append(m[self.default_next_state[i]].as_long())
         return table_entries,default_field,default_next_state
 
-class stm_verifier(stm_solver):
+class STMVerifier(STMSolver):
     
     def __init__(self,table_entries,default_field,default_next_state,no_fields,max_packet_size,max_field_size):
         
@@ -266,14 +266,14 @@ class stm_verifier(stm_solver):
         return next_state,next_pos,next_phv
     
 
-    def add_verification_constraint(self,field_sizes,initial_phv,num_steps,spec,accept_or_reject):
+    def add_verification_constraint(self,field_sizes,initial_phv,num_steps,spec):
         
         #accept_or_reject - Z3py expression which says whether to accept or reject depending on input
         
         final_state,_,final_phv = self.simulate_stm(field_sizes,initial_phv,self.counterexample,num_steps)
         
         constraints = []
-        desired_output = spec(self.counterexample)
+        desired_output,accept_or_reject = spec(self.counterexample)
         
         for f in range(self.no_fields):
             constraints.append(final_phv[f]!=desired_output[f])
@@ -299,13 +299,13 @@ def print_table(table_entries,default_field,default_next_state):
 #returns a valid parsing state machine with min no of states and minimum table entries as 
 #(table entries specifying special transitions, default fields for states, default next states)
 
-def find_stm(field_sizes,initial_phv,spec,accept_or_reject,max_num_states,max_num_entries,max_packet_size,max_field_size,
+def find_stm(field_sizes,initial_phv,spec,max_num_states,max_num_entries,max_packet_size,max_field_size,
              ordering_type=OrderingType.STATE_ORDERING,constant_synthesis=False,constants=None,debug=False):
 
     for no_states in range(1,max_num_states):
         for table_size in range(0,max_num_entries):
             
-            stm = stm_generator(table_size,no_states,len(field_sizes),max_packet_size,max_field_size,ordering_type)
+            stm = STMGenerator(table_size,no_states,len(field_sizes),max_packet_size,max_field_size,ordering_type)
             
             if(constant_synthesis):
                 
@@ -316,8 +316,8 @@ def find_stm(field_sizes,initial_phv,spec,accept_or_reject,max_num_states,max_nu
             
             
             pkt = BitVec('packet',max_packet_size)
-            
-            stm.add_correctness_constraint(field_sizes,initial_phv,pkt,no_states,spec(pkt),accept_or_reject)
+            desired_phv,accept_or_reject = spec(pkt)
+            stm.add_correctness_constraint(field_sizes,initial_phv,pkt,no_states,desired_phv,accept_or_reject)
             
             while True:
                 if stm.is_sat():
@@ -327,9 +327,9 @@ def find_stm(field_sizes,initial_phv,spec,accept_or_reject,max_num_states,max_nu
                     
                     table_entries,default_field,default_next_state=stm.get_candidate_stm()
                     
-                    v = stm_verifier(table_entries,default_field,default_next_state,len(field_sizes),max_packet_size,max_field_size)
+                    v = STMVerifier(table_entries,default_field,default_next_state,len(field_sizes),max_packet_size,max_field_size)
                     
-                    v.add_verification_constraint(field_sizes,initial_phv,no_states,spec,accept_or_reject)
+                    v.add_verification_constraint(field_sizes,initial_phv,no_states,spec)
                     
                     if v.is_sat():
                         
@@ -338,7 +338,9 @@ def find_stm(field_sizes,initial_phv,spec,accept_or_reject,max_num_states,max_nu
                         if debug:
                             print(f"Candidate STM doesn't parse the following packet correctly: {counterexample}\n")
                         
-                        stm.add_correctness_constraint(field_sizes,initial_phv,counterexample,no_states,spec(counterexample),accept_or_reject)
+                        desired_phv,accept_or_reject = spec(counterexample)
+                        
+                        stm.add_correctness_constraint(field_sizes,initial_phv,counterexample,no_states,desired_phv,accept_or_reject)
                     
                     else:
                     

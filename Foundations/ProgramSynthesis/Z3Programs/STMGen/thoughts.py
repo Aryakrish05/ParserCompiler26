@@ -124,3 +124,25 @@ to choose which field they shall extract and select on - when at a particular st
 that a given set of field values and the remaining values not mentioned partition the space into 
 a few parts. And they need not be invoked later.
 '''
+
+
+'''
+NOTE Thoughts on conversion from C code to logical formula
+
+when you're at a particular point in your code -> 
+
+your pointer has a particular position ::::
+This position depends on what all has been extracted till now ->
+you can easily represent it as a logical formula - bunch of nested if-else's
+
+Now when you are extracting a particular field - you know the logical formula of the pointer,
+we ideally want to extract from ptr to ptr+field_sz, now the problem is the high>=low thing
+again !!! :(
+
+Iterate over all pointer values again ??? -> seems to be better in the worst case than
+when compared to doing an extraction for every path to the current point in the CFG
+
+At every merge -> just like a phi node, I can add a new variable which I shall write a logical
+formula for ->  
+
+'''

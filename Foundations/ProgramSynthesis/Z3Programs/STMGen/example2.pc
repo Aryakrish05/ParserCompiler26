@@ -1,0 +1,10 @@
+
+int parse (){
+    Extract(field0,4);
+    if (field0==2){
+        Extract(field1,1);
+    }
+    Extract(field2,1);
+    Extract(field3,2);
+    return ACCEPT;
+}

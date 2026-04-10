@@ -11,7 +11,7 @@ you could extract and then probably later compare against that field]
 - but they must return an int
 
 *** NOTE - Main assumption - no lookaheads (also makes sense tbh)
-    [TODO - add support to statically detect this and throw an error]
+    [TODO - add support to statically detect this and throw an error, DONE!]
 
 *** The only conditions are == or != conditions 
     [TODO - should be possible to add support for other types also ->
@@ -19,11 +19,9 @@ you could extract and then probably later compare against that field]
 
 *** No other computation happens in the code (It's supposed to represent a parser after all!)
 
-*** All instructions after an if condition or else condition must be within blocks [easier to deal with now]
-
 *** NOTE, the stm generator assumes that whatever was extracted last must be used for checking - TODO
-see if we really need to enforce this condition
- 
+see if we really need to enforce this condition - or this is general enough !?
+. Give a rigorous proof or a counterexample
 CFG nodes of the following types -
 
 *** entry which is the start of the function
@@ -115,11 +113,12 @@ class ExtractNode(CFGNode):
         #no need to take backup here as i am the first person to modify, just reset the cur_phv value to default_phv -> or lite doesn't matter
         
         cur_field_sz = field_no_to_sizes_map[self.extract_field_no]
-        cur_phv[self.extract_field_no] = ZeroExt(max_field_size-cur_field_sz,Extract(ptr+cur_field_sz-1,ptr,packet))
+        #cur_phv[self.extract_field_no] = ZeroExt(max_field_size-cur_field_sz,Extract(ptr+cur_field_sz-1,ptr,packet))
+        cur_phv[self.extract_field_no] = Extract(ptr+cur_field_sz-1,ptr,packet)
         assert(self.next is not None)
         res_phv,res_state = self.next.make_spec(cur_phv,default_phv,ptr+cur_field_sz,field_no_to_sizes_map,max_field_size,packet)
-        res_phv[self.extract_field_no] = ZeroExt(max_field_size-cur_field_sz,Extract(ptr+cur_field_sz-1,ptr,packet))
-        
+        #res_phv[self.extract_field_no] = ZeroExt(max_field_size-cur_field_sz,Extract(ptr+cur_field_sz-1,ptr,packet))
+        res_phv[self.extract_field_no] = Extract(ptr+cur_field_sz-1,ptr,packet)
         return (res_phv,res_state)
 
 class IfThenElseNode(CFGNode):
@@ -186,6 +185,7 @@ class CFGGenerator(ast.NodeVisitor):
         super().__init__()
         self.field_name_to_no_map = {}
         self.field_no_to_sizes_map = {}
+        self.constants = []
         self.max_fields = 0
         
     def generic_visit(self, node: ast.Node):
@@ -276,7 +276,7 @@ class CFGGenerator(ast.NodeVisitor):
             raise CompilationError("You must extract a field before checking on it in all possible paths")
         
         if_node = IfThenElseNode(self.field_name_to_no_map[condition[1]],condition[2])
-        
+        self.constants.append(condition[2])
         end_nodes = []
         if(next_true is not None):
             if_node.next_true = next_true[0]
@@ -323,6 +323,8 @@ class CFGGenerator(ast.NodeVisitor):
         if(n.block_items is None):
             return None
         for x in n.block_items:
+            if(not isinstance(x,ast.If) and not isinstance(x,ast.FuncCall) and not isinstance(x,ast.Return)):
+                raise CompilationError("In a block, you can have only extracts,if-statements and returns")
             res_x_visit = self.visit(x)
             if(res_x_visit is not None):
                 if(not at_least_one_stmt):
@@ -353,7 +355,8 @@ class CFGGenerator(ast.NodeVisitor):
         
         assert(entry_node is not None)
         
-        return entry_node,self.field_name_to_no_map,self.field_no_to_sizes_map
+        return entry_node,self.field_name_to_no_map,self.field_no_to_sizes_map,self.constants
+    
 
 def get_spec(filename):
     file_ast = parse_file(filename)
@@ -362,20 +365,36 @@ def get_spec(filename):
     
     assert(res is not None)
     
-    entry,field_name_to_no_map,field_no_to_sizes_map = res
+    entry,field_name_to_no_map,field_no_to_sizes_map,constants = res
     no_fields = len(field_no_to_sizes_map)
     max_field_size = max(field_no_to_sizes_map.values())
         
-    cur_phv = [BitVecVal(0,max_field_size) for _ in range(no_fields)]
+    cur_phv = [BitVecVal(0,field_no_to_sizes_map[i]) for i in range(no_fields)]
     
-    default_phv = [BitVecVal(0,max_field_size) for _ in range(no_fields)]
+    default_phv = [BitVecVal(0,field_no_to_sizes_map[i]) for i in range(no_fields)]
+    
+    default_phv_padded = [BitVecVal(0,max_field_size) for i in range(no_fields)]
     
     fields_extracted = [False]*no_fields
     
     max_packet_size = entry.get_max_packet_size(0,fields_extracted,field_no_to_sizes_map)
     
+    packet = BitVec('x',max_packet_size)
     def spec(packet):    
         #TODO can we not do the cfg traversal everytime ? Any better way to get closure ? Ok for now
-        return entry.make_spec(cur_phv,default_phv,0,field_no_to_sizes_map,max_field_size,packet)
-
-    return field_name_to_no_map,field_no_to_sizes_map,max_packet_size,default_phv,spec
+        res_phv,res_state = entry.make_spec(cur_phv,default_phv,0,field_no_to_sizes_map,max_field_size,packet)
+        for i in range(no_fields):
+            res_phv[i] = ZeroExt(max_field_size-field_no_to_sizes_map[i],res_phv[i])
+        return res_phv,res_state
+        
+    #phv, accept = (entry.make_spec(cur_phv,default_phv,0,field_no_to_sizes_map,max_field_size,packet))
+    #for i, f in enumerate(phv):
+    #    print(f"field[{i}]:\n{f}")
+    #    print("\n\n\n")
+    #print(f"accept:\n{accept}")
+    #print()
+    #print(field_no_to_sizes_map)
+    #print(field_name_to_no_map)
+    #print("max pkt sz=",max_packet_size)
+    #print("max field sz= ", max_field_size)
+    return field_name_to_no_map,field_no_to_sizes_map,max_packet_size,default_phv_padded,spec,list(set(constants))

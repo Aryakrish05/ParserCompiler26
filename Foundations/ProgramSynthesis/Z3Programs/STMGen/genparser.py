@@ -299,11 +299,13 @@ def print_table(table_entries,default_field,default_next_state):
 #returns a valid parsing state machine with min no of states and minimum table entries as 
 #(table entries specifying special transitions, default fields for states, default next states)
 
-def find_stm(field_sizes,initial_phv,spec,max_num_states,max_num_entries,max_packet_size,max_field_size,
+def find_stm(field_sizes,initial_phv,spec,min_num_states,max_num_states,min_num_entries,max_num_entries,max_packet_size,max_field_size,
              ordering_type=OrderingType.STATE_ORDERING,constant_synthesis=False,constants=None,debug=False):
 
-    for no_states in range(1,max_num_states):
-        for table_size in range(0,max_num_entries):
+    #TODO - try iterating in another order, statically detect ranges for states
+    #TODO - add certain fields which are for ternary matches - can we detect this also statically
+    for no_states in range(min_num_states,max_num_states):
+        for table_size in range(min_num_entries,max_num_entries+1):
             
             stm = STMGenerator(table_size,no_states,len(field_sizes),max_packet_size,max_field_size,ordering_type)
             

@@ -1,0 +1,34 @@
+int parse() {
+    Extract(data1_f16,16);
+    if (data1_f16==2048) {
+        Extract(ipv4_f7,7);
+        Extract(ipv4_fragOffset,13);
+        Extract(ipv4_ihl,4);
+        Extract(ipv4_protocol,8);
+        if (ipv4_fragOffset==0) {
+            if (ipv4_ihl==5) {
+                if (ipv4_protocol==6) {
+                    Extract(tcp_f16,16);
+                    return ACCEPT;
+                }
+                else if (ipv4_protocol==17) {
+                    Extract(udp_f32,32);
+                }
+            }
+        }
+    }
+    else if (data1_f16==34525) {
+        Extract(ipv6_f8,8);
+        Extract(ipv6_f32,32);
+        if (ipv6_f8==58) {
+            Extract(icmp_f8,8);
+        }
+        else if (ipv6_f8==6) {
+            Extract(tcp_f16,16);
+        }
+        else if (ipv6_f8==17) {
+            Extract(udp_f32,32);
+        }
+    }
+    return ACCEPT;
+}

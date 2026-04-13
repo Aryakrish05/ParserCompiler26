@@ -15,6 +15,10 @@ argument_parser = argparse.ArgumentParser(description="runner.py")
 argument_parser.add_argument("--input",type=str,required=True,help="Input file")
 argument_parser.add_argument("--max_states", type=int, default=5)
 argument_parser.add_argument("--max_entries", type=int, default=5)
+argument_parser.add_argument("--min_states", type=int, default=1)
+argument_parser.add_argument("--min_entries", type=int, default=0)
+argument_parser.add_argument("--debug", type=str, default="ON")
+
 args = argument_parser.parse_args()
 
 field_name_to_no_map,field_no_to_sizes_map,max_packet_size,default_phv,spec,constants = get_spec(args.input)
@@ -27,12 +31,17 @@ max_num_states = args.max_states
 
 max_num_entries = args.max_entries
 
+min_num_states = args.min_states
+
+min_num_entries = args.min_entries
+
+debug = True if (args.debug == "ON") else False
 max_field_size = max(field_no_to_sizes_map.values())
 
 start=time.time()
 print(constants)
 print(field_name_to_no_map)
-table_entries,default_field,default_next_state = find_stm(field_sizes,default_phv,spec,1,15,1,15,max_packet_size,max_field_size,debug=True,constant_synthesis=True,constants=constants)
+table_entries,default_field,default_next_state = find_stm(field_sizes,default_phv,spec,min_num_states,max_num_states,min_num_entries,max_num_entries,max_packet_size,max_field_size,debug=debug,constant_synthesis=True,constants=constants)
 end=time.time()
 print(end-start)
 

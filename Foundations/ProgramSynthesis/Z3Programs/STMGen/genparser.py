@@ -304,11 +304,11 @@ def find_stm(field_sizes,initial_phv,spec,min_num_states,max_num_states,min_num_
 
     #TODO - try iterating in another order, statically detect ranges for states
     #TODO - add certain fields which are for ternary matches - can we detect this also statically
-    for no_states in range(min_num_states,max_num_states):
+    for no_states in range(min_num_states,max_num_states+1):
         for table_size in range(min_num_entries,max_num_entries+1):
-            
+            print(f"no_states={no_states} && table_size={table_size}")
             stm = STMGenerator(table_size,no_states,len(field_sizes),max_packet_size,max_field_size,ordering_type)
-            
+
             if(constant_synthesis):
                 
                 if(constants is None):
@@ -319,6 +319,7 @@ def find_stm(field_sizes,initial_phv,spec,min_num_states,max_num_states,min_num_
             
             pkt = BitVec('packet',max_packet_size)
             desired_phv,accept_or_reject = spec(pkt)
+            
             stm.add_correctness_constraint(field_sizes,initial_phv,pkt,no_states,desired_phv,accept_or_reject)
             
             while True:

@@ -146,3 +146,61 @@ At every merge -> just like a phi node, I can add a new variable which I shall w
 formula for ->  
 
 '''
+
+'''
+Cool stuff!!!
+
+All those fields which are not needed at all in any comparison - can just be thought of as bits!
+It isn't going to affect my synthesis in any way - We will get massive speedup
+[This is applicable even if there is ternary matching]
+
+Another cool point is that all those fields which do comparisons with numbers of at most b bits
+can be modelled as having only b+1 bits !
+
+Given the exact matching constraint in the code, note that the constants that we match
+against also don't matter! I could assign any values to them and still end up with the same parse graph
+
+Let k be the number of if statements, 
+We can see that there can be at most ceil(logk) bits needed for the maximum guy.
+We can have all other fields of size at most ceil(logk)+1.
+
+Note that there can be at most k fields which are compared now.
+So at maximum 2k fields which are not compared. That's easily done by doing the necessary merging.
+
+And these not compared fields have a total size of at most 2k. The other useful things
+have a size of k(ceil[logk]+1).
+
+The maximum packet size is upper bounded by 3k+k*ceil[logk].
+Practically for all realistic programs with exact matching, this should be bounded
+within 300!
+
+This problem can be solved very quickly using synthesis
+'''
+
+'''
+TODO THINK - IS THE WAY WE ARE HANDLING != CORRECT !?
+'''
+
+'''
+Extending to the bitmask conditions - 
+We can decide to allow comparisons of the form 
+(field&mask)==value - just add another table entry for mask!
+
+And in all correctness constraints, instead of exact matches, we just have 
+an exact match of an and
+
+Now , TODO - think how to do the optimisation above for this!?
+
+'''
+
+'''
+TODO - understand how Z3 works - find out why there is a huge speedup 
+if we run state wise - I am not even using a common solver!
+THINK !!!!!!!!
+'''
+
+'''
+TODO -
+Think about what you can do for the output after this... Think you can still group stuff
+'''
+

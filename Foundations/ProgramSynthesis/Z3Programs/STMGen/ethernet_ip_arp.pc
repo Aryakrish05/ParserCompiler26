@@ -1,12 +1,13 @@
 
 int parse(){
-    Extract(ethernet_src_dst,48);
-    Extract(ethernet_type,16);
-    if(ethernet_type==2048){
-        Extract(ipv4,32);
+    Extract(ethernet_src_dst,2);
+    Extract(ethernet_type,2);
+    Extract(ethernet_padding,1);
+    if(ethernet_type==2){
+        Extract(ipv4,2);
     }
-    else if(ethernet_type==2054){
-        Extract(arp,32);
+    else if(ethernet_type==3){
+        Extract(arp,2);
     }
     return ACCEPT;
 }

@@ -381,20 +381,22 @@ def get_spec(filename):
     
     packet = BitVec('x',max_packet_size)
     def spec(packet):    
+        print("Entering spec function")
         #TODO can we not do the cfg traversal everytime ? Any better way to get closure ? Ok for now
         res_phv,res_state = entry.make_spec(cur_phv,default_phv,0,field_no_to_sizes_map,max_field_size,packet)
         for i in range(no_fields):
             res_phv[i] = ZeroExt(max_field_size-field_no_to_sizes_map[i],res_phv[i])
+        print("Exiting spec function")
         return res_phv,res_state
         
-    #phv, accept = (entry.make_spec(cur_phv,default_phv,0,field_no_to_sizes_map,max_field_size,packet))
-    #for i, f in enumerate(phv):
-    #    print(f"field[{i}]:\n{f}")
-    #    print("\n\n\n")
-    #print(f"accept:\n{accept}")
-    #print()
-    #print(field_no_to_sizes_map)
-    #print(field_name_to_no_map)
-    #print("max pkt sz=",max_packet_size)
-    #print("max field sz= ", max_field_size)
+    phv, accept = (entry.make_spec(cur_phv,default_phv,0,field_no_to_sizes_map,max_field_size,packet))
+    for i, f in enumerate(phv):
+        print(f"field[{i}]:\n{f}")
+        print("\n\n\n")
+    print(f"accept:\n{accept}")
+    print()
+    print(field_no_to_sizes_map)
+    print(field_name_to_no_map)
+    print("max pkt sz=",max_packet_size)
+    print("max field sz= ", max_field_size)
     return field_name_to_no_map,field_no_to_sizes_map,max_packet_size,default_phv_padded,spec,list(set(constants))

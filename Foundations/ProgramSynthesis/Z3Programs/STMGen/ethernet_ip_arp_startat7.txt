@@ -1,0 +1,121 @@
+PS C:\Users\aryak\OneDrive\Desktop\UGRC\ParserCompiler26\Foundations\ProgramSynthesis\Z3Programs\STMGen> python .\runner.py --input .\ethernet_ip_arp.pc --min_states 7 --max_states 7 --min_entries 2 --max_entries 2
+field[0]:
+Extract(1, 0, x)
+
+
+
+
+field[1]:
+Extract(3, 2, x)
+
+
+
+
+field[2]:
+Extract(4, 4, x)
+
+
+
+
+field[3]:
+If(Extract(3, 2, x) == 2,
+   Extract(6, 5, x),
+   If(Extract(3, 2, x) == 3, 0, 0))
+
+
+
+
+field[4]:
+If(Extract(3, 2, x) == 2,
+   0,
+   If(Extract(3, 2, x) == 3, Extract(6, 5, x), 0))
+
+
+
+
+accept:
+If(Extract(3, 2, x) == 2,
+   True,
+   If(Extract(3, 2, x) == 3, True, True))
+
+{0: 2, 1: 2, 2: 1, 3: 2, 4: 2}
+{'ethernet_src_dst': 0, 'ethernet_type': 1, 'ethernet_padding': 2, 'ipv4': 3, 'arp': 4}
+max pkt sz= 7
+max field sz=  2
+[2, 3]
+{'ethernet_src_dst': 0, 'ethernet_type': 1, 'ethernet_padding': 2, 'ipv4': 3, 'arp': 4}
+no_states=7 && table_size=2
+Entering spec function
+Exiting spec function
+Hello
+checking_if_sat
+I didn't die!
+
+Candidate STM found for table size 2 and number of states 7
+Entering spec function
+Exiting spec function
+Candidate STM doesn't parse the following packet correctly: 120
+
+Entering spec function
+Exiting spec function
+checking_if_sat
+I didn't die!
+
+Candidate STM found for table size 2 and number of states 7
+Entering spec function
+Exiting spec function
+Candidate STM doesn't parse the following packet correctly: 40
+
+Entering spec function
+Exiting spec function
+checking_if_sat
+I didn't die!
+
+Candidate STM found for table size 2 and number of states 7
+Entering spec function
+Exiting spec function
+Candidate STM doesn't parse the following packet correctly: 121
+
+Entering spec function
+Exiting spec function
+checking_if_sat
+I didn't die!
+
+Candidate STM found for table size 2 and number of states 7
+Entering spec function
+Exiting spec function
+Candidate STM doesn't parse the following packet correctly: 116
+
+Entering spec function
+Exiting spec function
+checking_if_sat
+I didn't die!
+
+Candidate STM found for table size 2 and number of states 7
+Entering spec function
+Exiting spec function
+Candidate STM doesn't parse the following packet correctly: 108
+
+Entering spec function
+Exiting spec function
+checking_if_sat
+I didn't die!
+
+Candidate STM found for table size 2 and number of states 7
+Entering spec function
+Exiting spec function
+An STM parsing all possible packets with given constraints found!
+
+Table entries:
+Current state: 1, Next state: 4, Match value: 2
+Current state: 1, Next state: 3, Match value: 3
+
+Default fields and next states:
+State: 0, Default field: 0, Default next state: 1
+State: 1, Default field: 1, Default next state: 2
+State: 2, Default field: 2, Default next state: 7
+State: 3, Default field: 2, Default next state: 6
+State: 4, Default field: 2, Default next state: 5
+State: 5, Default field: 3, Default next state: 7
+State: 6, Default field: 4, Default next state: 7
+6089.090301990509

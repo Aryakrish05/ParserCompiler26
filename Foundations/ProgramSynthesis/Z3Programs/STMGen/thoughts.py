@@ -174,7 +174,38 @@ The maximum packet size is upper bounded by 3k+k*ceil[logk].
 Practically for all realistic programs with exact matching, this should be bounded
 within 300!
 
-This problem can be solved very quickly using synthesis
+This problem can be solved very quickly using synthesis [NOT!:(]
+Ran an experiment on ethernet_ip.pc - 
+for one thing i minimised bitwidths of the useless fields to 1 only (resulting max pkt sz 43)
+another i minimised bitwidths of everything to a total of 22 bits
+
+Both of them ran overnight and didn't complete beyond 10 states :(.
+In almost similar times...
+So it is better but not the main reason for slowdown...
+
+TODO - think if you can combine into structs after bitmasks - here the bitmasks are constants
+and all the other fields come for free (and need not have repeating states)???
+
+IS it correct to branch once and for all for a given set of fields ?? 
+Does this cause copies ??
+YES!
+int parse(){
+    Extract(hdr);
+    if(hdr1.field0==2){
+        Extract(hdr2);
+        if(hdr1.field1==3){
+            Extract(hdr3);
+        }
+        else if(hdr1.field1==4){
+            Extract(hdr4);
+        }
+        else{
+            Extract(hdr5);
+        }
+    }   
+}
+SUCH CODES ARE NOT REALISTIC ??
+This causes three times repeat of header2
 '''
 
 '''
@@ -204,3 +235,38 @@ TODO -
 Think about what you can do for the output after this... Think you can still group stuff
 '''
 
+'''
+NOTE - Analyse this code and get more insights
+https://github.com/ParserHawk/ParserHawk/blob/main/z3/cegis_loop/SIGCOMM_expr/CEGIS_complex_parser_Tofino.py
+
+TODO - 
+Think about what would happen if we don't even have the verification constraint in 
+the STMGenerator - 
+
+Get more counterexamples but run faster ??
+
+Cause we have something like a universal quantification - which is pretty bad
+
+TODO -
+Instead of calling the Z3 spec, can I just simulate it in python quickly??
+'''
+
+'''
+NOTE - fixing the spec - I can statically remember all the properties every field
+has in the path - Do I need this ?? 
+This is the only way that I can think of ...
+'''
+
+'''
+TODO
+Also to think about ---
+Why is there an improvement eventhough I am creating a new solver instance everytime!!!
+This is the most counterintuitive thing ever...
+'''
+'''
+Constrain the state transitions,
+UNSAT core
+picking strategic variables - concretization
+Fix programs - combining an entire struct may not be better
+property directed reachability
+'''

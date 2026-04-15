@@ -1,11 +1,11 @@
 
 int parse(){
     Extract(field0,4);
-    if (field0==3){
+    if ((field0&5)==0){
         Extract(field1,1);
     }
     else{
-        Extract(field1,1);
+        Extract(field3,1);
     }
     Extract(field2,2);
     return REJECT;

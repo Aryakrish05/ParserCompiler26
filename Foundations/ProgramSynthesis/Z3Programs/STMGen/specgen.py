@@ -122,14 +122,21 @@ class ExtractNode(CFGNode):
         return (res_phv,res_state)
 
 class IfThenElseNode(CFGNode):
-    def __init__(self,check_field_no,equality_value):
+    def __init__(self,check_field_no,equality_value,mask=None,ternary_match=False):
+        self.ternary_match = ternary_match
+        self.mask = mask
+        if(self.ternary_match and mask is None):
+            raise ValueError("IfThenElseNode constructor: you need to provide mask if it is ternary")
         self.check_field_no = check_field_no
         self.value = equality_value
         self.next_true = None
         self.next_false = None
     
     def print(self,indent):
-        print(" "*indent,f"If(field{self.check_field_no}=={self.value})")
+        if(self.ternary_match):
+            print(" "*indent,f"If((field{self.check_field_no}&{self.mask})=={self.value})")
+        else:
+            print(" "*indent,f"If(field{self.check_field_no}=={self.value})")
         assert(self.next_true is not None)
         print(" "*indent,"IfTrue:")
         self.next_true.print(indent+4)
@@ -159,8 +166,14 @@ class IfThenElseNode(CFGNode):
         
         res_phv = []
         for i in range(len(true_res_phv)):
-            res_phv.append(If(cur_phv[self.check_field_no]==self.value,true_res_phv[i],false_res_phv[i]))
-        res_state = If(cur_phv[self.check_field_no]==self.value,true_res_state,false_res_state)
+            if(self.ternary_match):
+                res_phv.append(If((cur_phv[self.check_field_no]&self.mask)==self.value,true_res_phv[i],false_res_phv[i]))
+            else:
+                res_phv.append(If(cur_phv[self.check_field_no]==self.value,true_res_phv[i],false_res_phv[i]))
+        if(self.ternary_match):
+            res_state = If((cur_phv[self.check_field_no]&self.mask)==self.value,true_res_state,false_res_state)
+        else:
+            res_state = If(cur_phv[self.check_field_no]==self.value,true_res_state,false_res_state)
 
         return (res_phv,res_state)
     
@@ -186,7 +199,9 @@ class CFGGenerator(ast.NodeVisitor):
         self.field_name_to_no_map = {}
         self.field_no_to_sizes_map = {}
         self.constants = []
+        self.mask_constants = []
         self.max_fields = 0
+        self.ternary_match = False
         
     def generic_visit(self, node: ast.Node):
         raise CompilationError("The code doesn't adhere to the specification, use only allowed constructs")
@@ -256,7 +271,7 @@ class CFGGenerator(ast.NodeVisitor):
     def visit_If(self,n:ast.If):
         
         if(not isinstance(n.cond,ast.BinaryOp)):
-            raise CompilationError("Only Binary comparisons of identifier and constant allowed as if condition")
+            raise CompilationError("Only Binary/Ternary comparisons of identifier and constant allowed as if condition")
         
         condition = self.visit(n.cond)
         next_true = self.visit(n.iftrue)
@@ -270,13 +285,28 @@ class CFGGenerator(ast.NodeVisitor):
         
         if(condition[0]=="!="):
             next_false,next_true = next_true,next_false
+            
+        match_value = condition[2]
+        match_field_name = condition[1]
+        match_mask = None
+        if(isinstance(condition[1],tuple)):
+            match_field_name = condition[1][1]
+            match_mask = condition[1][2]
+            self.ternary_match = True
+            if(condition[1][0]!="&"):
+                raise CompilationError("The only operator allowed for ternary matching is & and it should be used once")
         
-        if(condition[1] not in self.field_name_to_no_map):
-            #should be runtime error - but
+        if(match_field_name not in self.field_name_to_no_map):
             raise CompilationError("You must extract a field before checking on it in all possible paths")
         
-        if_node = IfThenElseNode(self.field_name_to_no_map[condition[1]],condition[2])
-        self.constants.append(condition[2])
+        if(match_mask is None):
+            if_node = IfThenElseNode(self.field_name_to_no_map[match_field_name],match_value)
+        else:
+            if_node = IfThenElseNode(self.field_name_to_no_map[match_field_name],match_value,match_mask,True)
+            self.mask_constants.append(match_mask)
+            
+        self.constants.append(match_value)
+        
         end_nodes = []
         if(next_true is not None):
             if_node.next_true = next_true[0]
@@ -297,23 +327,22 @@ class CFGGenerator(ast.NodeVisitor):
     
     def visit_BinaryOp(self,n:ast.BinaryOp):
         
-        if(n.op not in ["==","!="]):
-            raise CompilationError("Only comparison operations supported are == and !=")
+        if(n.op not in ["==","!=","&"]):
+            raise CompilationError("The only operations supported are == and != and & in a specific format")
         
-        if(not isinstance(n.left,ast.ID)):
-            raise CompilationError("Left side of an operator must be an Identifier")
-            #it might be possible that this ID is something else, we shall check if it is extracted while walking on the CFG
+        if(n.op=="&" and not isinstance(n.left,ast.ID)):
+            raise CompilationError("Left side of an operator must be an Identifier when you are doing ternary match")
         
         if(not isinstance(n.right,ast.Constant)):
             raise CompilationError("Right side of an operator must be a Constant")
 
-        condition_field = self.visit(n.left)
+        condition_field_or_mask = self.visit(n.left)
         condition_value = self.visit(n.right)
         
         if (condition_value is not None and condition_value<0):
             raise CompilationError("The comparison value must be positive")
             
-        return (n.op,condition_field,condition_value)
+        return (n.op,condition_field_or_mask,condition_value)
     
     def visit_Compound(self,n:ast.Compound):
         #silently skips dead code, it doesn't chain it to the main CFG
@@ -355,7 +384,7 @@ class CFGGenerator(ast.NodeVisitor):
         
         assert(entry_node is not None)
         
-        return entry_node,self.field_name_to_no_map,self.field_no_to_sizes_map,self.constants
+        return entry_node,self.field_name_to_no_map,self.field_no_to_sizes_map,self.constants,self.mask_constants,self.ternary_match
     
 
 def get_spec(filename):
@@ -365,10 +394,13 @@ def get_spec(filename):
     
     assert(res is not None)
     
-    entry,field_name_to_no_map,field_no_to_sizes_map,constants = res
+    entry,field_name_to_no_map,field_no_to_sizes_map,constants,mask_constants,ternary_match = res
     no_fields = len(field_no_to_sizes_map)
     max_field_size = max(field_no_to_sizes_map.values())
-        
+    
+    if(ternary_match):
+        mask_constants.append((1<<max_field_size)-1)
+
     cur_phv = [BitVecVal(0,field_no_to_sizes_map[i]) for i in range(no_fields)]
     
     default_phv = [BitVecVal(0,field_no_to_sizes_map[i]) for i in range(no_fields)]
@@ -399,4 +431,4 @@ def get_spec(filename):
     print(field_name_to_no_map)
     print("max pkt sz=",max_packet_size)
     print("max field sz= ", max_field_size)
-    return field_name_to_no_map,field_no_to_sizes_map,max_packet_size,default_phv_padded,spec,list(set(constants))
+    return field_name_to_no_map,field_no_to_sizes_map,max_packet_size,default_phv_padded,spec,list(set(constants)),list(set(mask_constants)),ternary_match

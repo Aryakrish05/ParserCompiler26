@@ -1,4 +1,3 @@
-
 int parse() {
     Extract(data1_f16,16);
     if (data1_f16==2048) {
@@ -45,9 +44,9 @@ int parse() {
             return ACCEPT;
         }
         if (ipv6_f8==88) { return ACCEPT; }
-        else if (ipv6_f8==89) { return ACCEPT; }
-        else if (ipv6_f8==103) { return ACCEPT; }
-        else if (ipv6_f8==112) { return ACCEPT; }
+        if (ipv6_f8==89) { return ACCEPT; }
+        if (ipv6_f8==103) { return ACCEPT; }
+        if (ipv6_f8==112) { return ACCEPT; }
         return ACCEPT;
     }
     return ACCEPT;

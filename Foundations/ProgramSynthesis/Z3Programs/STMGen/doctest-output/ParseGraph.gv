@@ -1,20 +1,14 @@
 // Parser as State Machine
 digraph ParseGraph {
-	Node0 [label="Extract(ethernet_src_dst)"]
-	Node1 [label="Extract(ethernet_type)"]
-	Node2 [label="Extract(ethernet_padding)"]
-	Node3 [label="Extract(ethernet_padding)"]
-	Node4 [label="Extract(arp)"]
-	Node5 [label="Extract(ethernet_padding)"]
-	Node6 [label="Extract(ipv4)"]
+	Node0 [label="Extract(field0)"]
+	Node1 [label="Extract(field1)"]
+	Node2 [label="Extract(field2)"]
+	Node3 [label="Extract(field3)"]
 	ACCEPT [label=ACCEPT]
-	Node0 -> Node1
-	Node1 -> Node5
-	Node2 -> Node4
-	Node3 -> Node6
-	Node4 -> ACCEPT
-	Node5 -> ACCEPT
-	Node6 -> ACCEPT
-	Node1 -> Node2 [label="match 3"]
-	Node1 -> Node3 [label="match 2"]
+	Node0 -> Node3
+	Node1 -> Node3
+	Node2 -> Node3
+	Node3 -> ACCEPT
+	Node0 -> Node1 [label="v=3,m=15"]
+	Node0 -> Node2 [label="v=4,m=15"]
 }

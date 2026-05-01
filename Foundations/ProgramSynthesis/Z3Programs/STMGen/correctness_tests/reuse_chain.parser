@@ -1,0 +1,24 @@
+// All paths extract phv.p after the dispatch, so the chain
+// [p_chunk -> ACCEPT] should be SHARED across all branches via reuse.
+// Expected: 1 INS state for p_chunk, all dispatches funnel into it.
+struct h    { bit_8  v; };
+struct p    { bit_64 d; };
+
+struct {
+    struct h h;
+    struct p p;
+} phv;
+
+int parse() {
+    Extract(phv.h);
+    if (phv.h.v == 1) {
+        Extract(phv.p);
+        return ACCEPT;
+    }
+    if (phv.h.v == 2) {
+        Extract(phv.p);
+        return ACCEPT;
+    }
+    Extract(phv.p);
+    return ACCEPT;
+}

@@ -1,0 +1,22 @@
+// Three SEPARATE if statements all on h.v, in sequence after one extract.
+// Tests that the dispatch entry list grows correctly with N positive cases
+// and that REUSE fires for the (default) ACCEPT terminator chain.
+struct h     { bit_8 v; bit_8 dummy; };
+struct opt_a { bit_30 d; };
+struct opt_b { bit_30 d; };
+struct opt_c { bit_30 d; };
+
+struct {
+    struct h     h;
+    struct opt_a a;
+    struct opt_b b;
+    struct opt_c c;
+} phv;
+
+int parse() {
+    Extract(phv.h);
+    if (phv.h.v == 1) { Extract(phv.a); return ACCEPT; }
+    if (phv.h.v == 2) { Extract(phv.b); return ACCEPT; }
+    if (phv.h.v == 3) { Extract(phv.c); return ACCEPT; }
+    return ACCEPT;
+}

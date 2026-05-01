@@ -1,0 +1,25 @@
+// Same field h.v has BOTH an equality check (== 5) and a ternary check
+// ((v & 3) == 1). Forces ternary_match=True; tests the projector against
+// a mix of EQ and BAND atoms on the same field bits.
+struct h { bit_8 v; bit_8 dummy; };
+struct p1 { bit_30 d; };
+struct p2 { bit_30 d; };
+
+struct {
+    struct h  h;
+    struct p1 p1;
+    struct p2 p2;
+} phv;
+
+int parse() {
+    Extract(phv.h);
+    if (phv.h.v == 5) {
+        Extract(phv.p1);
+        return ACCEPT;
+    }
+    if ((phv.h.v & 3) == 1) {
+        Extract(phv.p2);
+        return ACCEPT;
+    }
+    return ACCEPT;
+}

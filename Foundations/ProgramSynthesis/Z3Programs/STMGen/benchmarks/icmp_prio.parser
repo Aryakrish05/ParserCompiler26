@@ -1,0 +1,35 @@
+// Translated from https://github.com/ParserHawk/ParserHawk/blob/main/z3/cegis_loop/SIGCOMM_expr/P4_examples/parse_icmp_accept/parse_icmp_accept.p4
+//Basic bitmask check
+
+struct data_t {
+    bit_16 f16;
+};
+
+struct icmp_t {
+    bit_16 typeCode;
+    bit_16 hdrChecksum;
+};
+
+struct {
+    struct icmp_t icmp;
+    struct data_t data;
+} phv;
+
+int parse() {
+    Extract(phv.icmp);
+    if ((phv.icmp.typeCode & 65024) == 33280) {        
+        Extract(phv.data);
+        return ACCEPT;
+    }
+    else if ((phv.icmp.typeCode & 64512) == 33792) {   
+        Extract(phv.data);
+        return ACCEPT;
+    }
+    else if ((phv.icmp.typeCode & 63488) == 34816) {   
+        Extract(phv.data);
+        return ACCEPT;
+    }
+    else {
+        return ACCEPT;
+    }
+}

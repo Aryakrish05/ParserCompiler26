@@ -1,0 +1,27 @@
+// Several fully-uncompared structs in a row after a dispatch field.
+// Tests chain construction with many placeholder INS states + replication
+// across dispatch branches (since each path has different next targets).
+struct sel  { bit_4  v; bit_4 dummy; };
+struct s1   { bit_50 d; };
+struct s2   { bit_60 d; };
+struct s3   { bit_70 d; };
+struct opt  { bit_80 d; };
+
+struct {
+    struct sel sel;
+    struct s1  s1;
+    struct s2  s2;
+    struct s3  s3;
+    struct opt opt;
+} phv;
+
+int parse() {
+    Extract(phv.sel);
+    Extract(phv.s1);
+    Extract(phv.s2);
+    Extract(phv.s3);
+    if (phv.sel.v == 1) {
+        Extract(phv.opt);
+    }
+    return ACCEPT;
+}

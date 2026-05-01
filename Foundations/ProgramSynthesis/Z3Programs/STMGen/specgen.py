@@ -111,14 +111,12 @@ class ExtractNode(CFGNode):
         
     def make_spec(self, cur_phv, default_phv, ptr, field_no_to_sizes_map, max_field_size,packet):
         #no need to take backup here as i am the first person to modify, just reset the cur_phv value to default_phv -> or lite doesn't matter
-        
+
         cur_field_sz = field_no_to_sizes_map[self.extract_field_no]
-        #cur_phv[self.extract_field_no] = ZeroExt(max_field_size-cur_field_sz,Extract(ptr+cur_field_sz-1,ptr,packet))
-        cur_phv[self.extract_field_no] = Extract(ptr+cur_field_sz-1,ptr,packet)
+        cur_phv[self.extract_field_no] = ZeroExt(max_field_size-cur_field_sz,Extract(ptr+cur_field_sz-1,ptr,packet))
         assert(self.next is not None)
         res_phv,res_state = self.next.make_spec(cur_phv,default_phv,ptr+cur_field_sz,field_no_to_sizes_map,max_field_size,packet)
-        #res_phv[self.extract_field_no] = ZeroExt(max_field_size-cur_field_sz,Extract(ptr+cur_field_sz-1,ptr,packet))
-        res_phv[self.extract_field_no] = Extract(ptr+cur_field_sz-1,ptr,packet)
+        res_phv[self.extract_field_no] = ZeroExt(max_field_size-cur_field_sz,Extract(ptr+cur_field_sz-1,ptr,packet))
         return (res_phv,res_state)
 
 class IfThenElseNode(CFGNode):
@@ -194,7 +192,7 @@ class ExitNode(CFGNode):
         return (copy.deepcopy(default_phv),self.accept_or_reject)
 
 class CFGGenerator(ast.NodeVisitor):
-    def __init__(self) -> None:
+    def __init__(self):
         super().__init__()
         self.field_name_to_no_map = {}
         self.field_no_to_sizes_map = {}
@@ -336,11 +334,14 @@ class CFGGenerator(ast.NodeVisitor):
         if(not isinstance(n.right,ast.Constant)):
             raise CompilationError("Right side of an operator must be a Constant")
 
+        if((n.op=="==" or n.op=="!=") and not (isinstance(n.left,ast.ID) or (isinstance(n.left,ast.BinaryOp) and n.left.op=="&"))):
+            raise CompilationError("Left side of an operator must be an Identifier when you are doing an exact match")
+        
         condition_field_or_mask = self.visit(n.left)
         condition_value = self.visit(n.right)
         
         if (condition_value is not None and condition_value<0):
-            raise CompilationError("The comparison value must be positive")
+            raise CompilationError("The comparison value must be non-negative")
             
         return (n.op,condition_field_or_mask,condition_value)
     
@@ -396,28 +397,29 @@ def get_spec(filename):
     
     entry,field_name_to_no_map,field_no_to_sizes_map,constants,mask_constants,ternary_match = res
     no_fields = len(field_no_to_sizes_map)
-    max_field_size = max(field_no_to_sizes_map.values())
-    
+    #+1 for the sentinel high bit: phv values for unextracted fields stay at -1
+    #(all 1s), while any zero-extended extracted value has high bit 0, so
+    #equality with the sentinel is sound for "not yet extracted".
+    max_field_size = max(field_no_to_sizes_map.values()) + 1
+
     if(ternary_match):
         mask_constants.append((1<<max_field_size)-1)
 
-    cur_phv = [BitVecVal(0,field_no_to_sizes_map[i]) for i in range(no_fields)]
-    
-    default_phv = [BitVecVal(0,field_no_to_sizes_map[i]) for i in range(no_fields)]
-    
-    default_phv_padded = [BitVecVal(0,max_field_size) for i in range(no_fields)]
-    
+    cur_phv = [BitVecVal(-1,max_field_size) for i in range(no_fields)]
+
+    default_phv = [BitVecVal(-1,max_field_size) for i in range(no_fields)]
+
+    default_phv_padded = [BitVecVal(-1,max_field_size) for i in range(no_fields)]
+
     fields_extracted = [False]*no_fields
-    
+
     max_packet_size = entry.get_max_packet_size(0,fields_extracted,field_no_to_sizes_map)
-    
+
     packet = BitVec('x',max_packet_size)
-    def spec(packet):    
+    def spec(packet):
         print("Entering spec function")
         #TODO can we not do the cfg traversal everytime ? Any better way to get closure ? Ok for now
         res_phv,res_state = entry.make_spec(cur_phv,default_phv,0,field_no_to_sizes_map,max_field_size,packet)
-        for i in range(no_fields):
-            res_phv[i] = ZeroExt(max_field_size-field_no_to_sizes_map[i],res_phv[i])
         print("Exiting spec function")
         return res_phv,res_state
         
@@ -431,4 +433,4 @@ def get_spec(filename):
     print(field_name_to_no_map)
     print("max pkt sz=",max_packet_size)
     print("max field sz= ", max_field_size)
-    return field_name_to_no_map,field_no_to_sizes_map,max_packet_size,default_phv_padded,spec,list(set(constants)),list(set(mask_constants)),ternary_match
+    return field_name_to_no_map,field_no_to_sizes_map,max_packet_size,default_phv_padded,spec,list(set(constants)),list(set(mask_constants)),ternary_match,max_field_size

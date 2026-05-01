@@ -1,0 +1,136 @@
+// Inspired by https://github.com/p4lang/switch/blob/master/p4src/includes/parser.p4
+// One header tells which header to extract next - one field may need to be extracted by multiple states
+
+struct ethernet_t {
+    bit_48 dst_mac;
+    bit_48 src_mac;
+    bit_16 ethertype;
+};
+
+struct ipv6_t {
+    bit_4   version;
+    bit_8   traffic_class;
+    bit_20  flow_label;
+    bit_16  payload_len;
+    bit_8   next_hdr;
+    bit_8   hop_limit;
+    bit_128 src_addr;
+    bit_128 dst_addr;
+};
+
+struct hbh_t {
+    bit_8  next_hdr;
+    bit_8  hdr_ext_len;
+    bit_48 options;
+};
+
+struct dest_opts_t {
+    bit_8  next_hdr;
+    bit_8  hdr_ext_len;
+    bit_48 options;
+};
+
+struct tcp_t {
+    bit_16 src_port;
+    bit_16 dst_port;
+    bit_32 seq_num;
+    bit_32 ack_num;
+    bit_8  data_offset_reserved;
+    bit_8  flags;
+    bit_16 window;
+    bit_16 checksum;
+    bit_16 urgent_ptr;
+};
+
+struct udp_t {
+    bit_16 src_port;
+    bit_16 dst_port;
+    bit_16 length;
+    bit_16 checksum;
+};
+
+struct {
+    struct ethernet_t  ethernet;
+    struct ipv6_t      ipv6;
+    struct hbh_t       hbh;
+    struct dest_opts_t dest_opts;
+    struct tcp_t       tcp;
+    struct udp_t       udp;
+} phv;
+
+int parse() {
+    Extract(phv.ethernet);
+    if (phv.ethernet.ethertype == 34525) {                  
+        Extract(phv.ipv6);
+        if (phv.ipv6.next_hdr == 0) {                        // Hop-by-Hop Options first
+            Extract(phv.hbh);
+            if (phv.hbh.next_hdr == 60) {                    // Destination Options second
+                Extract(phv.dest_opts);
+                if (phv.dest_opts.next_hdr == 6) {           
+                    Extract(phv.tcp);
+                    return ACCEPT;
+                }
+                else if (phv.dest_opts.next_hdr == 17) {    
+                    Extract(phv.udp);
+                    return ACCEPT;
+                }
+                else {
+                    return ACCEPT;
+                }
+            }
+            else if (phv.hbh.next_hdr == 6) {
+                Extract(phv.tcp);
+                return ACCEPT;
+            }
+            else if (phv.hbh.next_hdr == 17) {
+                Extract(phv.udp);
+                return ACCEPT;
+            }
+            else {
+                return ACCEPT;
+            }
+        }
+        else if (phv.ipv6.next_hdr == 60) {                  // Destination Options first
+            Extract(phv.dest_opts);
+            if (phv.dest_opts.next_hdr == 0) {               // Hop-by-Hop Options second
+                Extract(phv.hbh);
+                if (phv.hbh.next_hdr == 6) {
+                    Extract(phv.tcp);
+                    return ACCEPT;
+                }
+                else if (phv.hbh.next_hdr == 17) {
+                    Extract(phv.udp);
+                    return ACCEPT;
+                }
+                else {
+                    return ACCEPT;
+                }
+            }
+            else if (phv.dest_opts.next_hdr == 6) {
+                Extract(phv.tcp);
+                return ACCEPT;
+            }
+            else if (phv.dest_opts.next_hdr == 17) {
+                Extract(phv.udp);
+                return ACCEPT;
+            }
+            else {
+                return ACCEPT;
+            }
+        }
+        else if (phv.ipv6.next_hdr == 6) {
+            Extract(phv.tcp);
+            return ACCEPT;
+        }
+        else if (phv.ipv6.next_hdr == 17) {
+            Extract(phv.udp);
+            return ACCEPT;
+        }
+        else {
+            return ACCEPT;
+        }
+    }
+    else {
+        return REJECT;
+    }
+}

@@ -1,0 +1,28 @@
+// Two compared fields in different structs; classic ipv4-then-tcp pattern
+// (outer dispatches on h1.v, inner on h2.t). Tests stitching across two PG
+// states each with their own dispatches and inserted chains.
+struct h1 { bit_4  v; bit_12 unused; };
+struct h2 { bit_4  pre; bit_8  t; bit_4 post; };
+struct payload_a { bit_50 d; };
+struct payload_b { bit_50 d; };
+
+struct {
+    struct h1        h1;
+    struct h2        h2;
+    struct payload_a a;
+    struct payload_b b;
+} phv;
+
+int parse() {
+    Extract(phv.h1);
+    if (phv.h1.v == 5) {
+        Extract(phv.h2);
+        if (phv.h2.t == 1) {
+            Extract(phv.a);
+        }
+        else if (phv.h2.t == 2) {
+            Extract(phv.b);
+        }
+    }
+    return ACCEPT;
+}

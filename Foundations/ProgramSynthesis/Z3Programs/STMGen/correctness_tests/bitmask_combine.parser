@@ -1,0 +1,40 @@
+struct hdr1 {
+    bit_10 f0;
+    bit_5  f1;
+};
+
+struct hdr2 {
+    bit_10  f0;
+    bit_3   f1;
+    bit_100 f2;
+    bit_3   f3;
+};
+
+struct {
+    struct hdr1 hdr1;
+    struct hdr2 hdr2;
+} phv;
+
+int parse() {
+    Extract(phv.hdr1);
+    if (phv.hdr1.f0 != 5) {
+        Extract(phv.hdr2);
+        if ((phv.hdr2.f1 & 3) == 2) {
+            if ((phv.hdr2.f3 & 5) == 4) {
+                return ACCEPT;
+            }
+            else if ((phv.hdr2.f3 & 5) == 1) {
+                return ACCEPT;
+            }
+            else {
+                return REJECT;
+            }
+        }
+        else {
+            return ACCEPT;
+        }
+    }
+    else {
+        return REJECT;
+    }
+}

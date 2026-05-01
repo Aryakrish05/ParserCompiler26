@@ -1,0 +1,29 @@
+// Struct with TWO compared sub-fields (type, op) and dropped neighbors on
+// every side: (prefix dropped, type kept, pad1 dropped, op kept, pad2 dropped).
+// Tests partition with multiple anchors:
+//   - prefix attaches to type (no previous kept)
+//   - pad1 attaches to type (previous kept)
+//   - pad2 attaches to op  (previous kept)
+struct hdr {
+    bit_4  prefix;
+    bit_8  type;
+    bit_8  pad1;
+    bit_4  op;
+    bit_8  pad2;
+};
+struct payload { bit_100 d; };
+
+struct {
+    struct hdr     hdr;
+    struct payload p;
+} phv;
+
+int parse() {
+    Extract(phv.hdr);
+    if (phv.hdr.type == 5) {
+        if (phv.hdr.op == 1) {
+            Extract(phv.p);
+        }
+    }
+    return ACCEPT;
+}

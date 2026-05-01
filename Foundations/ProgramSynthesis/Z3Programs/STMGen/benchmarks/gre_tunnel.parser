@@ -1,0 +1,82 @@
+// Translated from https://github.com/p4lang/switch/blob/master/p4src/includes/parser.p4
+
+struct ethernet_t {
+    bit_48 dst_mac;
+    bit_48 src_mac;
+    bit_16 ethertype;
+};
+
+struct ipv4_t {
+    bit_4  version;
+    bit_4  ihl;
+    bit_8  tos;
+    bit_16 total_len;
+    bit_16 identification;
+    bit_16 frag_offset;
+    bit_8  ttl;
+    bit_8  protocol;
+    bit_16 hdr_checksum;
+    bit_32 src_addr;
+    bit_32 dst_addr;
+};
+
+struct gre_t {
+    bit_1  C;
+    bit_1  R;
+    bit_1  K;
+    bit_1  S;
+    bit_1  s;
+    bit_3  recurse;
+    bit_5  flags;
+    bit_3  ver;
+    bit_16 proto;
+};
+
+struct nvgre_t {
+    bit_24 tni;
+    bit_8  flow_id;
+};
+
+struct {
+    struct ethernet_t ethernet;
+    struct ipv4_t     ipv4;
+    struct gre_t      gre;
+    struct nvgre_t    nvgre;
+    struct ipv4_t     inner_ipv4;
+    struct ethernet_t inner_ethernet;
+} phv;
+
+int parse() {
+    Extract(phv.ethernet);
+    if (phv.ethernet.ethertype == 2048) {                    // 0x0800 IPv4
+        Extract(phv.ipv4);
+        if (phv.ipv4.protocol == 47) {                        // IPPROTO_GRE
+            Extract(phv.gre);
+            if (phv.gre.K == 1) {
+                if (phv.gre.proto == 25944) {                 // 0x6558 NVGRE
+                    Extract(phv.nvgre);
+                    Extract(phv.inner_ethernet);
+                    return ACCEPT;
+                }
+                else {
+                    return ACCEPT;                            // K=1 but not NVGRE: default ingress
+                }
+            }
+            else {
+                if (phv.gre.proto == 2048) {
+                    Extract(phv.inner_ipv4);
+                    return ACCEPT;
+                }
+                else {
+                    return ACCEPT;
+                }
+            }
+        }
+        else {
+            return ACCEPT;
+        }
+    }
+    else {
+        return REJECT;
+    }
+}

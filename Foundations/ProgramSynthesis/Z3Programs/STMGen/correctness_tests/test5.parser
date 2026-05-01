@@ -1,0 +1,25 @@
+// Same field (h.v) is checked at two SEPARATE if statements after one extract.
+// Tests that build_stitched_graph correctly groups paths by predicate
+// projections on the SAME field across non-nested checks.
+struct h    { bit_8  v; bit_16 dummy; };
+struct p1   { bit_50 d; };
+struct p2   { bit_60 d; };
+
+struct {
+    struct h  h;
+    struct p1 p1;
+    struct p2 p2;
+} phv;
+
+int parse() {
+    Extract(phv.h);
+    if (phv.h.v == 1) {
+        Extract(phv.p1);
+        return ACCEPT;
+    }
+    if (phv.h.v == 2) {
+        Extract(phv.p2);
+        return ACCEPT;
+    }
+    return ACCEPT;
+}

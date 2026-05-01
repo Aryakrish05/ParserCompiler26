@@ -1,0 +1,32 @@
+struct struct1 { bit_4 field0; };
+struct struct2 { bit_100 field1; };
+struct struct3 { bit_245 field2; };
+struct struct4 { bit_2000 field3; };
+struct struct5 { bit_1000 field4; };
+
+struct {
+    struct struct1 struct1;
+    struct struct2 struct2;
+    struct struct3 struct3;
+    struct struct4 struct4;
+    struct struct5 struct5;
+} phv;
+
+int parse() {
+    Extract(phv.struct1);
+    if ((phv.struct1.field0 & 3) == 2) {
+        Extract(phv.struct2);
+        if (phv.struct2.field1 == 1) {
+            Extract(phv.struct3);
+        }
+        else {
+            Extract(phv.struct4);
+        }
+    }
+    else if (phv.struct1.field0 == 5) {
+        Extract(phv.struct3);
+        Extract(phv.struct4);
+    }
+    Extract(phv.struct5);
+    return ACCEPT;
+}

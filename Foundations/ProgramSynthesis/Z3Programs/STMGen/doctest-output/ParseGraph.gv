@@ -1,14 +1,14 @@
 // Parser as State Machine
 digraph ParseGraph {
-	Node0 [label="Extract(field0)"]
-	Node1 [label="Extract(field1)"]
-	Node2 [label="Extract(field2)"]
-	Node3 [label="Extract(field3)"]
+	Node0 [label="Extract(field0_v_0)"]
+	Node1 [label="Extract(field1_v_1)"]
+	Node2 [label="Extract(field2_v_2)"]
+	Node3 [label="Extract(field3_v_3)"]
 	ACCEPT [label=ACCEPT]
 	Node0 -> Node3
 	Node1 -> Node3
 	Node2 -> Node3
 	Node3 -> ACCEPT
-	Node0 -> Node1 [label="v=3,m=15"]
-	Node0 -> Node2 [label="v=4,m=15"]
+	Node0 -> Node2 [label="v=4,m=47"]
+	Node0 -> Node1 [label="v=3,m=47"]
 }

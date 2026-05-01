@@ -1,0 +1,22 @@
+// Both branches of an if-else extract the SAME struct then ACCEPT.
+// All three paths should converge with redundant-dispatch suppression
+// (every path's chain is [p_chunk -> ACCEPT]).
+struct h { bit_4 v; bit_4 dummy; };
+struct p { bit_30 d; };
+
+struct {
+    struct h h;
+    struct p p;
+} phv;
+
+int parse() {
+    Extract(phv.h);
+    if (phv.h.v == 1) {
+        Extract(phv.p);
+        return ACCEPT;
+    }
+    else {
+        Extract(phv.p);
+        return ACCEPT;
+    }
+}

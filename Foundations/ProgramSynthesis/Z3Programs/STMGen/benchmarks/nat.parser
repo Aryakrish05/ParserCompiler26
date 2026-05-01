@@ -1,0 +1,83 @@
+//Translated from https://github.com/smartnic/bpf-profile/blob/main/samples/xdp_nat_dp_v1_kern.c
+
+struct ethernet_t {
+    bit_48 dst_mac;
+    bit_48 src_mac;
+    bit_16 ethertype;
+};
+
+struct ipv4_t {
+    bit_4  version;
+    bit_4  ihl;
+    bit_8  tos;
+    bit_16 tot_len;
+    bit_16 id;
+    bit_16 frag_off;
+    bit_8  ttl;
+    bit_8  protocol;
+    bit_16 check;
+    bit_32 saddr;
+    bit_32 daddr;
+};
+
+struct udp_t {
+    bit_16 source;
+    bit_16 dest;
+    bit_16 len;
+    bit_16 check;
+};
+
+struct tcp_t {
+    bit_16 source;
+    bit_16 dest;
+    bit_32 seq;
+    bit_32 ack_seq;
+    bit_8  data_offset_res;
+    bit_8  flags;
+    bit_16 window;
+    bit_16 check;
+    bit_16 urg_ptr;
+};
+
+struct icmp_t {
+    bit_8  type;
+    bit_8  code;
+    bit_16 check;
+    bit_32 un;
+};
+
+struct {
+    struct ethernet_t ethernet;
+    struct ipv4_t     ipv4;
+    struct tcp_t      tcp;
+    struct udp_t      udp;
+    struct icmp_t     icmp;
+} phv;
+
+int parse() {
+    Extract(phv.ethernet);
+    if (phv.ethernet.ethertype == 2054) {            
+        return ACCEPT;
+    }
+    else if (phv.ethernet.ethertype == 2048) {       
+        Extract(phv.ipv4);
+        if (phv.ipv4.protocol == 6) {                
+            Extract(phv.tcp);
+            return ACCEPT;
+        }
+        else if (phv.ipv4.protocol == 17) {          
+            Extract(phv.udp);
+            return ACCEPT;
+        }
+        else if (phv.ipv4.protocol == 1) {           
+            Extract(phv.icmp);
+            return ACCEPT;
+        }
+        else {
+            return REJECT;
+        }
+    }
+    else {
+        return REJECT;
+    }
+}

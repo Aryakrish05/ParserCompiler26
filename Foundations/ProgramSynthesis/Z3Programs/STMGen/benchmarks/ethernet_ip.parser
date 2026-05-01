@@ -1,0 +1,113 @@
+// Translated from https://github.com/ParserHawk/ParserHawk/blob/main/z3/cegis_loop/SIGCOMM_expr/P4_examples/ethernet_ip/ethernet_ip.p4
+struct data1_t {
+    bit_16 f16;
+};
+
+struct ipv4_t {
+    bit_7  f7;
+    bit_13 fragOffset;
+    bit_4  ihl;
+    bit_8  protocol;
+};
+
+struct ipv6_t {
+    bit_8  f8;
+    bit_32 f32;
+};
+
+struct tcp_t {
+    bit_16 f16;
+};
+
+struct udp_t {
+    bit_32 f32;
+};
+
+struct icmp_t {
+    bit_8 f8;
+};
+
+struct {
+    struct data1_t data1;
+    struct ipv4_t  ipv4;
+    struct ipv6_t  ipv6;
+    struct tcp_t   tcp;
+    struct udp_t   udp;
+    struct icmp_t  icmp;
+} phv;
+
+int parse() {
+    Extract(phv.data1);
+    if (phv.data1.f16 == 2048) {                    
+        Extract(phv.ipv4);
+        if (phv.ipv4.fragOffset == 0) {
+            if (phv.ipv4.ihl == 5) {
+                if (phv.ipv4.protocol == 6) {        
+                    Extract(phv.tcp);
+                    return ACCEPT;
+                }
+                else if (phv.ipv4.protocol == 17) { 
+                    Extract(phv.udp);
+                    return ACCEPT;
+                }
+                else {
+                    return ACCEPT;
+                }
+            }
+            else if (phv.ipv4.ihl == 0) {
+                if (phv.ipv4.protocol == 2) {        
+                    return ACCEPT;
+                }
+                else if (phv.ipv4.protocol == 88) {
+                    return ACCEPT;
+                }
+                else if (phv.ipv4.protocol == 89) {
+                    return ACCEPT;
+                }
+                else if (phv.ipv4.protocol == 103) {
+                    return ACCEPT;
+                }
+                else if (phv.ipv4.protocol == 112) {
+                    return ACCEPT;
+                }
+                else {
+                    return ACCEPT;
+                }
+            }
+            else {
+                return ACCEPT;
+            }
+        }
+    }
+    else if (phv.data1.f16 == 34525) {              
+        Extract(phv.ipv6);
+        if (phv.ipv6.f8 == 58) {                     
+            Extract(phv.icmp);
+            return ACCEPT;
+        }
+        else if (phv.ipv6.f8 == 6) {                 
+            Extract(phv.tcp);
+            return ACCEPT;
+        }
+        else if (phv.ipv6.f8 == 17) {                
+            Extract(phv.udp);
+            return ACCEPT;
+        }
+        else if (phv.ipv6.f8 == 88) {                
+            return ACCEPT;
+        }
+        else if (phv.ipv6.f8 == 89) {
+            return ACCEPT;
+        }
+        else if (phv.ipv6.f8 == 103) {
+            return ACCEPT;
+        }
+        else if (phv.ipv6.f8 == 112) {
+            return ACCEPT;
+        }
+        else {
+            return ACCEPT;
+        }
+    }
+    return ACCEPT;
+}

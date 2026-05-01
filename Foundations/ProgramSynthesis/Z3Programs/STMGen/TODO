@@ -1,0 +1,28 @@
+- Remove calls to spec wherever and instead allow python computation
+- Try iterating over the table size first and then over states [NEED TO WRITE THIS EFFECT INREPORT]- analyse why that momentum effect is observed using https://en.wikipedia.org/wiki/Conflict-driven_clause_learning and https://jamesbornholt.com/blog/sympro/ [Also see UNSAT Core]
+- Analyse https://github.com/ParserHawk/ParserHawk/blob/main/z3/cegis_loop/SIGCOMM_expr/CEGIS_complex_parser_Tofino.py to get more insights
+- Try out the alternate solution of combining everything - extracting a whole struct and then doing ternary matching [Do thorough analysis]
+- Find out how to generate final P4 code properly , with the proper sizes and structs
+- Analyse how general the code is
+
+- Read about CDCL/DPLL and understand https://en.wikipedia.org/wiki/Tseytin_transformation and read about UNSAT Core
+- Verification is cheap - add multiple counterexamples (memory issue ?? Analyse footprint mainly)
+TRY 
+THIS LATER...
+- What do these statistics mean ??
+IMPORTANT AND HARD
+- Finish writing the full frontend
+IMPORTANT AND MEDIUM
+
+- Find out ways to do the compression for non-matched bits and when there is no bitmask.
+- Find out how to compress in the presence of bitmasks
+VERY HARD THINKING WISE - BUT CAN BE IMPLEMENTED ON WEDNESDAY...
+
+- Check sensibility of the generated benchmarks and run them
+- Fix the spec - how do I do this ?? Discuss with Sir
+[the or of bitmasks on a path idea... - COOL STUFF - WE HAVE PRIORITY ENFORCING ALSO -> that's what makes this thing possible...]
+
+- On Wednesday, look at possible changes to State Machine
+
+
+- FOR CORRECTNESS - PREV BITMASK THING IS INCORRECT

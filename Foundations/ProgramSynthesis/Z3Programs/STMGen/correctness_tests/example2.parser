@@ -1,0 +1,18 @@
+struct field0 { bit_400 v; };
+struct field1 { bit_1000 v; };
+struct tail { bit_1 field2; bit_200 field3; };
+
+struct {
+    struct field0 field0;
+    struct tail tail;
+    struct field1 field1;
+} phv;
+
+int parse() {
+    Extract(phv.field0);
+    if (phv.field0.v == 2) {
+        Extract(phv.field1);
+    }
+    Extract(phv.tail);
+    return ACCEPT;
+}

@@ -1,0 +1,36 @@
+struct ethernet{
+    bit_48 src;
+    bit_48 dst;
+    bit_16 type;
+    bit_48 padding;
+};
+struct pain{
+    bit_10000 bruhhhh;
+};
+struct ipv4{
+    bit_1000 bruh;
+};
+struct arp{
+    bit_1000 bruh;
+};
+
+struct {
+    struct ethernet ethernet;
+    struct ipv4 ipv4;
+    struct arp arp;
+    struct pain pain1;
+    struct pain pain2;
+}phv;
+
+int parse(){
+    Extract(phv.ethernet);
+    Extract(phv.pain1);
+    Extract(phv.pain2);
+    if(phv.ethernet.type==2){
+        Extract(phv.ipv4);
+    }
+    else if(phv.ethernet.type==3){
+        Extract(phv.arp);
+    }
+    return ACCEPT;
+}

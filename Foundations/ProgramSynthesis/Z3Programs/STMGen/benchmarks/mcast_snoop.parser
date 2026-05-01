@@ -1,0 +1,134 @@
+// Inspired by https://github.com/p4lang/switch/blob/master/p4src/includes/parser.p4
+
+struct ethernet_t {
+    bit_48 dst_mac;
+    bit_48 src_mac;
+    bit_16 ethertype;
+};
+
+struct ipv4_t {
+    bit_4  version;
+    bit_4  ihl;
+    bit_8  tos;
+    bit_16 total_len;
+    bit_16 identification;
+    bit_16 frag_offset;
+    bit_8  ttl;
+    bit_8  protocol;
+    bit_16 hdr_checksum;
+    bit_32 src_addr;
+    bit_32 dst_addr;
+};
+
+struct ipv6_t {
+    bit_4   version;
+    bit_8   traffic_class;
+    bit_20  flow_label;
+    bit_16  payload_len;
+    bit_8   next_hdr;
+    bit_8   hop_limit;
+    bit_128 src_addr;
+    bit_128 dst_addr;
+};
+
+struct igmp_t {
+    bit_8  type;
+    bit_8  max_resp_time;
+    bit_16 checksum;
+    bit_32 group_addr;
+};
+
+struct icmp6_t {
+    bit_8  type;
+    bit_8  code;
+    bit_16 checksum;
+    bit_32 reserved_or_body;
+};
+
+struct arp_t {
+    bit_16 htype;
+    bit_16 ptype;
+    bit_8  hlen;
+    bit_8  plen;
+    bit_16 oper;
+    bit_48 sha;
+    bit_32 spa;
+    bit_48 tha;
+    bit_32 tpa;
+};
+
+struct {
+    struct ethernet_t ethernet;
+    struct ipv4_t     ipv4;
+    struct ipv6_t     ipv6;
+    struct igmp_t     igmp;
+    struct icmp6_t    icmp6;
+    struct arp_t      arp;
+} phv;
+
+int parse() {
+    Extract(phv.ethernet);
+    if ((phv.ethernet.dst_mac & 281474959933440) == 1101088686080) {        // 0xFFFFFF000000 / 0x01005E000000 — IPv4 multicast
+        if (phv.ethernet.ethertype == 2048) {                                // 0x0800 IPv4
+            Extract(phv.ipv4);
+            if (phv.ipv4.protocol == 2) {                                    // IPPROTO_IGMP
+                Extract(phv.igmp);
+                return ACCEPT;
+            }
+            else {
+                return ACCEPT;
+            }
+        }
+        else {
+            return ACCEPT;
+        }
+    }
+    else if ((phv.ethernet.dst_mac & 281470681743360) == 56294136348672) {  // 0xFFFF00000000 / 0x333300000000 — IPv6 multicast
+        if (phv.ethernet.ethertype == 34525) {                               // 0x86DD IPv6
+            Extract(phv.ipv6);
+            if (phv.ipv6.next_hdr == 58) {                                   // IPPROTO_ICMPV6
+                Extract(phv.icmp6);
+                if ((phv.icmp6.type & 254) == 130) {                         // 0xfe / 0x82 — MLDv1 query/report (130, 131)
+                    return ACCEPT;
+                }
+                else if ((phv.icmp6.type & 252) == 132) {                    // 0xfc / 0x84 — MLDv1 done + MLDv2 (132-135)
+                    return ACCEPT;
+                }
+                else if ((phv.icmp6.type & 254) == 134) {                    // 0xfe / 0x86 — Router Advert / Solicit (133, 134)
+                    return ACCEPT;
+                }
+                else {
+                    return ACCEPT;
+                }
+            }
+            else {
+                return ACCEPT;
+            }
+        }
+        else {
+            return ACCEPT;
+        }
+    }
+    else if (phv.ethernet.dst_mac == 281474976710655) {                      // 0xFFFFFFFFFFFF — broadcast
+        if (phv.ethernet.ethertype == 2054) {                                // 0x0806 ARP
+            Extract(phv.arp);
+            return ACCEPT;
+        }
+        else {
+            return ACCEPT;
+        }
+    }
+    else {
+        if (phv.ethernet.ethertype == 2048) {
+            Extract(phv.ipv4);
+            return ACCEPT;
+        }
+        else if (phv.ethernet.ethertype == 34525) {
+            Extract(phv.ipv6);
+            return ACCEPT;
+        }
+        else {
+            return ACCEPT;
+        }
+    }
+}

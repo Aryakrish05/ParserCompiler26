@@ -7,6 +7,8 @@ from enum import Enum
     #accept state is no_states
     #reject state is no_states+1
 
+set_param('verbose', 10)
+
 class STMNotFoundError(Exception):
     pass
 
@@ -17,9 +19,9 @@ class OrderingType(Enum):
     FIELD_FIXING = 3
     
 class STMSolver:
-    
-    def __init__(self,table_size,no_states,no_fields,max_packet_size,max_field_size):
-        
+
+    def __init__(self,table_size,no_states,no_fields,max_packet_size,max_field_size,not_always_extract=True):
+
         self.table_size = table_size
         self.no_states = no_states
         self.no_fields = no_fields
@@ -28,8 +30,12 @@ class STMSolver:
         self.solver = Solver()
         self.max_packet_size = max_packet_size
         self.max_field_size = max_field_size
+        #When True, a state extracts a field only if it hasn't been extracted yet
+        #on this path (sentinel guard via initial_phv). When False, every state
+        #visit extracts unconditionally - the original encoding.
+        self.not_always_extract = not_always_extract
     
-    def transition(self,cur_state,cur_pos,cur_phv,field_sizes,packet):
+    def transition(self,cur_state,cur_pos,cur_phv,field_sizes,packet,initial_phv):
         
         raise NotImplementedError
         
@@ -40,20 +46,21 @@ class STMSolver:
         cur_phv=initial_phv
         
         for _ in range(num_steps):
-            cur_state,cur_pos,cur_phv = self.transition(cur_state,cur_pos,cur_phv,field_sizes,packet)
+            cur_state,cur_pos,cur_phv = self.transition(cur_state,cur_pos,cur_phv,field_sizes,packet,initial_phv)
         
         return cur_state,cur_pos,cur_phv
     
     def is_sat(self):
-        
-        return self.solver.check()==sat
+        is_sat_or_not = self.solver.check()==sat
+        #print(self.solver.statistics ())
+        return is_sat_or_not
     
         
 class STMGenerator(STMSolver):
-    
-    def __init__(self,table_size,no_states,no_fields,max_packet_size,max_field_size,ordering_type,ternary_match):
-        
-        super().__init__(table_size,no_states,no_fields,max_packet_size,max_field_size)
+
+    def __init__(self,table_size,no_states,no_fields,max_packet_size,max_field_size,ordering_type,ternary_match,not_always_extract=True):
+
+        super().__init__(table_size,no_states,no_fields,max_packet_size,max_field_size,not_always_extract)
         
         self.entry_state = [Int(f's{i}') for i in range(table_size)]
         self.entry_next_state = [Int(f'ns{i}') for i in range(table_size)]
@@ -81,7 +88,8 @@ class STMGenerator(STMSolver):
         for i in range(table_size):
             for j in range(i+1,table_size):
                 if(self.ternary_match):
-                    constraints.append(Implies(And(self.entry_state[i]==self.entry_state[j],self.entry_match_mask[i]==self.entry_match_mask[j]),self.entry_match_value[i]!=self.entry_match_value[j]))
+                    #constraints.append(Implies(And(self.entry_state[i]==self.entry_state[j],self.entry_match_mask[i]==self.entry_match_mask[j]),self.entry_match_value[i]!=self.entry_match_value[j]))
+                    pass
                 else:
                     constraints.append(Implies(self.entry_state[i]==self.entry_state[j],self.entry_match_value[i]!=self.entry_match_value[j]))
                 
@@ -109,47 +117,58 @@ class STMGenerator(STMSolver):
         NOTE - cur_pos is guaranteed to be <=MAX_PACKET_SIZE
     '''    
     
-    def transition(self,cur_state,cur_pos,cur_phv,field_sizes,packet):
-        
+    def transition(self,cur_state,cur_pos,cur_phv,field_sizes,packet,initial_phv):
+
         next_pos = cur_pos
         next_phv  = [cur_phv[i] for i in range(self.no_fields)]
-        
+
+        #When not_always_extract: extraction only fires the first time a field is
+        #seen on this path (sentinel guard), table entries only fire on extracted
+        #fields, and out-of-bounds reject only triggers when the state actually
+        #attempts extraction. Otherwise: original always-extract encoding.
         for s in range(self.no_states):
             for f in range(self.no_fields):
                 if(self.fields_fixed and s!=f):
                     continue
                 for p in range(self.max_packet_size-field_sizes[f]+1):
-                    next_pos = If(And(cur_state==s,self.default_field[s]==f,cur_pos==p),p+field_sizes[f],next_pos)
-                    next_phv[f] = If(And(cur_state==s,self.default_field[s]==f,cur_pos==p),
-                                    ZeroExt(self.max_field_size-field_sizes[f],Extract(p+field_sizes[f]-1,p,packet))
-                                    ,next_phv[f])
-        
+                    g = And(cur_state==s,self.default_field[s]==f,cur_pos==p)
+                    if self.not_always_extract:
+                        g = And(g,next_phv[f]==initial_phv[f])
+                    next_pos = If(g,p+field_sizes[f],next_pos)
+                    next_phv[f] = If(g,
+                                ZeroExt(self.max_field_size-field_sizes[f],Extract(p+field_sizes[f]-1,p,packet))
+                                ,next_phv[f])
+
         next_state = cur_state #reject if reject and accept if accept
-        
+
         for s in range(self.no_states):
             next_state = If(cur_state==s,self.default_next_state[s],next_state)
-                
+
         for idx in range(self.table_size):
             for s in range(self.no_states):
                 for f in range(self.no_fields):
                     if(self.fields_fixed and s!=f):
                         continue
                     if(self.ternary_match):
-                        next_state = If(And(cur_state==s,self.default_field[s]==f,self.entry_state[idx]==s,(next_phv[f]&self.entry_match_mask[idx])==self.entry_match_value[idx]),
-                                  self.entry_next_state[idx],
-                                  next_state)
+                        g = And(cur_state==s,self.default_field[s]==f,self.entry_state[idx]==s,
+                                (next_phv[f]&self.entry_match_mask[idx])==self.entry_match_value[idx])
                     else:
-                        next_state = If(And(cur_state==s,self.default_field[s]==f,self.entry_state[idx]==s,next_phv[f]==self.entry_match_value[idx]),
-                                  self.entry_next_state[idx],
-                                  next_state)
-                        
+                        g = And(cur_state==s,self.default_field[s]==f,self.entry_state[idx]==s,
+                                next_phv[f]==self.entry_match_value[idx])
+                    if self.not_always_extract:
+                        g = And(g,next_phv[f]!=initial_phv[f])
+                    next_state = If(g,self.entry_next_state[idx],next_state)
+
         for s in range(self.no_states):
             for f in range(self.no_fields):
                 if(self.fields_fixed and s!=f):
                     continue
                 for p in range(self.max_packet_size-field_sizes[f]+1,self.max_packet_size+1):
-                    next_state = If(And(cur_state==s,self.default_field[s]==f,cur_pos==p),self.reject,next_state)
-                    
+                    g = And(cur_state==s,self.default_field[s]==f,cur_pos==p)
+                    if self.not_always_extract:
+                        g = And(g,cur_phv[f]==initial_phv[f])
+                    next_state = If(g,self.reject,next_state)
+
         return next_state,next_pos,next_phv
     
     def add_state_ordering_constraints(self):
@@ -224,80 +243,88 @@ class STMGenerator(STMSolver):
                 self.solver.add(Or(constraints))
 
     def get_candidate_stm(self):
-        
-        assert(self.is_sat())
-        
+        #Assumes that check() has been called and is sa
         m = self.solver.model()
+        def val(var, default=0):
+            v = m[var]
+            return v.as_long() if v is not None else default
         table_entries = []
         default_field = []
         default_next_state = []
         for i in range(self.table_size):
             if(self.ternary_match):
                 table_entries.append((
-                    m[self.entry_state[i]].as_long(),
-                    m[self.entry_next_state[i]].as_long(),
-                    m[self.entry_match_value[i]].as_long(),
-                    m[self.entry_match_mask[i]].as_long()
+                    val(self.entry_state[i]),
+                    val(self.entry_next_state[i]),
+                    val(self.entry_match_value[i]),
+                    val(self.entry_match_mask[i])
                 ))
             else:
                 table_entries.append((
-                    m[self.entry_state[i]].as_long(),
-                    m[self.entry_next_state[i]].as_long(),
-                    m[self.entry_match_value[i]].as_long()
+                    val(self.entry_state[i]),
+                    val(self.entry_next_state[i]),
+                    val(self.entry_match_value[i])
                 ))
         for i in range(self.no_states):
-            default_field.append(m[self.default_field[i]].as_long())
-            default_next_state.append(m[self.default_next_state[i]].as_long())
-            
+            default_field.append(val(self.default_field[i]))
+            default_next_state.append(val(self.default_next_state[i]))
+
         return table_entries,default_field,default_next_state
 
 class STMVerifier(STMSolver):
-    
-    def __init__(self,table_entries,default_field,default_next_state,no_fields,max_packet_size,max_field_size,ternary_match):
-        
-        super().__init__(len(table_entries),len(default_field),no_fields,max_packet_size,max_field_size)
- 
+
+    def __init__(self,table_entries,default_field,default_next_state,no_fields,max_packet_size,max_field_size,ternary_match,not_always_extract=True):
+
+        super().__init__(len(table_entries),len(default_field),no_fields,max_packet_size,max_field_size,not_always_extract)
+
         self.table_entries = table_entries
         self.default_field = default_field
         self.default_next_state = default_next_state
         self.counterexample = BitVec('packet',self.max_packet_size)
         self.ternary_match = ternary_match
-        
-    def transition(self,cur_state,cur_pos,cur_phv,field_sizes,packet):
+
+    def transition(self,cur_state,cur_pos,cur_phv,field_sizes,packet,initial_phv):
 
         next_pos = cur_pos
         next_phv  = [cur_phv[i] for i in range(self.no_fields)]
-        
+
         for s in range(self.no_states):
             f = self.default_field[s]
             for p in range(self.max_packet_size-field_sizes[f]+1):
-                next_pos = If(And(cur_state==s,cur_pos==p),p+field_sizes[f],next_pos)
-                next_phv[f] = If(And(cur_state==s,cur_pos==p),
+                g = And(cur_state==s,cur_pos==p)
+                if self.not_always_extract:
+                    g = And(g,next_phv[f]==initial_phv[f])
+                next_pos = If(g,p+field_sizes[f],next_pos)
+                next_phv[f] = If(g,
                                     ZeroExt(self.max_field_size-field_sizes[f],Extract(p+field_sizes[f]-1,p,packet))
                                     ,next_phv[f])
-        
-        next_state = cur_state 
-        
+
+        next_state = cur_state
+
         for s in range(self.no_states):
             next_state = If(cur_state==s,self.default_next_state[s],next_state)
-                
+
         for idx in range(self.table_size):
             for s in range(self.no_states):
                 f = self.default_field[s]
                 if(self.ternary_match):
-                    next_state = If(And(cur_state==s,self.table_entries[idx][0]==s,(next_phv[f]&BitVecVal(self.table_entries[idx][3],self.max_field_size))==BitVecVal(self.table_entries[idx][2],self.max_field_size)),
-                                self.table_entries[idx][1],
-                                next_state)
+                    g = And(cur_state==s,self.table_entries[idx][0]==s,
+                            (next_phv[f]&BitVecVal(self.table_entries[idx][3],self.max_field_size))==BitVecVal(self.table_entries[idx][2],self.max_field_size))
                 else:
-                    next_state = If(And(cur_state==s,self.table_entries[idx][0]==s,next_phv[f]==BitVecVal(self.table_entries[idx][2],self.max_field_size)),
-                                    self.table_entries[idx][1],
-                                    next_state)
-                        
+                    g = And(cur_state==s,self.table_entries[idx][0]==s,
+                            next_phv[f]==BitVecVal(self.table_entries[idx][2],self.max_field_size))
+                if self.not_always_extract:
+                    g = And(g,next_phv[f]!=initial_phv[f])
+                next_state = If(g,self.table_entries[idx][1],next_state)
+
         for s in range(self.no_states):
             f = self.default_field[s]
             for p in range(self.max_packet_size-field_sizes[f]+1,self.max_packet_size+1):
-                next_state = If(And(cur_state==s,cur_pos==p),self.reject,next_state)
-                    
+                g = And(cur_state==s,cur_pos==p)
+                if self.not_always_extract:
+                    g = And(g,cur_phv[f]==initial_phv[f])
+                next_state = If(g,self.reject,next_state)
+
         return next_state,next_pos,next_phv
     
 
@@ -317,8 +344,8 @@ class STMVerifier(STMSolver):
                 
         self.solver.add(Or(constraints))
     
-    def get_counterexample(self): 
-        assert(self.is_sat())
+    def get_counterexample(self):
+        #Assumes check() is called and is sat
         m = self.solver.model()
         return m[self.counterexample]
 
@@ -339,14 +366,14 @@ def print_table(table_entries,default_field,default_next_state,ternary_match):
 #(table entries specifying special transitions, default fields for states, default next states)
 
 def find_stm(field_sizes,initial_phv,spec,min_num_states,max_num_states,min_num_entries,max_num_entries,max_packet_size,max_field_size,
-             ordering_type=OrderingType.STATE_ORDERING,constant_synthesis=False,constants=None,debug=False,mask_constants=None,ternary_match=False):
+             ordering_type=OrderingType.STATE_ORDERING,constant_synthesis=False,constants=None,debug=False,mask_constants=None,ternary_match=False,not_always_extract=True):
 
     #TODO - try iterating in another order, statically detect ranges for states
     #TODO - add certain fields which are for ternary matches - can we detect this also statically
-    for no_states in range(min_num_states,max_num_states+1):
-        for table_size in range(min_num_entries,max_num_entries+1):
+    for table_size in range(min_num_entries,max_num_entries+1):
+        for no_states in range(min_num_states,max_num_states+1):
             print(f"no_states={no_states} && table_size={table_size}")
-            stm = STMGenerator(table_size,no_states,len(field_sizes),max_packet_size,max_field_size,ordering_type,ternary_match)
+            stm = STMGenerator(table_size,no_states,len(field_sizes),max_packet_size,max_field_size,ordering_type,ternary_match,not_always_extract)
 
             if(constant_synthesis):
                 
@@ -364,12 +391,14 @@ def find_stm(field_sizes,initial_phv,spec,min_num_states,max_num_states,min_num_
             while True:
                 if stm.is_sat():
                     
-                    if debug:
-                        print(f"\nCandidate STM found for table size {table_size} and number of states {no_states}")
-                    
                     table_entries,default_field,default_next_state=stm.get_candidate_stm()
                     
-                    v = STMVerifier(table_entries,default_field,default_next_state,len(field_sizes),max_packet_size,max_field_size,ternary_match)
+                    if debug:
+                        print(f"\nCandidate STM found for table size {table_size} and number of states {no_states}")
+                        print_table(table_entries,default_field,default_next_state,ternary_match)
+                        
+                    
+                    v = STMVerifier(table_entries,default_field,default_next_state,len(field_sizes),max_packet_size,max_field_size,ternary_match,not_always_extract)
                     
                     v.add_verification_constraint(field_sizes,initial_phv,no_states,spec)
                     

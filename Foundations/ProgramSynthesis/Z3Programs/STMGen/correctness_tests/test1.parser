@@ -1,0 +1,21 @@
+
+struct h {
+    bit_8  d1;    
+    bit_16 d2;     
+    bit_8  d3;     
+    bit_4  type;   
+};
+struct payload { bit_50 d; };
+
+struct {
+    struct h       h;
+    struct payload p;
+} phv;
+
+int parse() {
+    Extract(phv.h);
+    if (phv.h.type == 9) {
+        Extract(phv.p);
+    }
+    return ACCEPT;
+}

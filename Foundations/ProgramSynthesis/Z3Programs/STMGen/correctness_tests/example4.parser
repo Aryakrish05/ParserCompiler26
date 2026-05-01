@@ -1,0 +1,20 @@
+struct struct1 { bit_4 field0; };
+struct struct2 { bit_100 field1; bit_25 field2; };
+struct struct3 { bit_1000 field3; };
+
+struct {
+    struct struct1 struct1;
+    struct struct2 struct2;
+    struct struct3 struct3;
+} phv;
+
+int parse() {
+    Extract(phv.struct1);
+    if (phv.struct1.field0 == 3) {
+        Extract(phv.struct2);
+        if (phv.struct2.field1 == 1) {
+        }
+    }
+    Extract(phv.struct3);
+    return ACCEPT;
+}

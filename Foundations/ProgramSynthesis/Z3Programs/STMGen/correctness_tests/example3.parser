@@ -1,0 +1,23 @@
+struct field0 { bit_4 v; };
+struct field1 { bit_10 v; };
+struct field2 { bit_25 v; };
+struct field3 { bit_13 v; };
+
+struct {
+    struct field0 field0;
+    struct field1 field1;
+    struct field2 field2;
+    struct field3 field3;
+} phv;
+
+int parse() {
+    Extract(phv.field0);
+    if ((phv.field0.v & 5) == 0) {
+        Extract(phv.field1);
+    }
+    else {
+        Extract(phv.field3);
+    }
+    Extract(phv.field2);
+    return REJECT;
+}

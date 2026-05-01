@@ -1,0 +1,90 @@
+// Translated from https://github.com/p4lang/switch/blob/master/p4src/includes/parser.p4
+
+struct ethernet_t {
+    bit_48 dst_mac;
+    bit_48 src_mac;
+    bit_16 ethertype;
+};
+
+struct ipv4_t {
+    bit_4  version;
+    bit_4  ihl;
+    bit_8  tos;
+    bit_16 total_len;
+    bit_16 identification;
+    bit_16 frag_offset;
+    bit_8  ttl;
+    bit_8  protocol;
+    bit_16 hdr_checksum;
+    bit_32 src_addr;
+    bit_32 dst_addr;
+};
+
+struct ipv6_t {
+    bit_4   version;
+    bit_8   traffic_class;
+    bit_20  flow_label;
+    bit_16  payload_len;
+    bit_8   next_hdr;
+    bit_8   hop_limit;
+    bit_128 src_addr;
+    bit_128 dst_addr;
+};
+
+struct udp_t {
+    bit_16 src_port;
+    bit_16 dst_port;
+    bit_16 length;
+    bit_16 checksum;
+};
+
+struct vxlan_t {
+    bit_8  flags;
+    bit_24 reserved;
+    bit_24 vni;
+    bit_8  reserved2;
+};
+
+struct {
+    struct ethernet_t ethernet;
+    struct ipv4_t     ipv4;
+    struct udp_t      udp;
+    struct vxlan_t    vxlan;
+    struct ethernet_t inner_ethernet;
+    struct ipv4_t     inner_ipv4;
+    struct ipv6_t     inner_ipv6;
+} phv;
+
+int parse() {
+    Extract(phv.ethernet);
+    if (phv.ethernet.ethertype == 2048) {
+        Extract(phv.ipv4);
+        if (phv.ipv4.protocol == 17) {
+            Extract(phv.udp);
+            if (phv.udp.dst_port == 4789) {
+                Extract(phv.vxlan);
+                Extract(phv.inner_ethernet);
+                if (phv.inner_ethernet.ethertype == 2048) {
+                    Extract(phv.inner_ipv4);
+                    return ACCEPT;
+                }
+                else if (phv.inner_ethernet.ethertype == 34525) {
+                    Extract(phv.inner_ipv6);
+                    return ACCEPT;
+                }
+                else {
+                    return ACCEPT;
+                }
+            }
+            else {
+                return ACCEPT;
+            }
+        }
+        else {
+            return ACCEPT;
+        }
+    }
+    else {
+        return REJECT;
+    }
+}

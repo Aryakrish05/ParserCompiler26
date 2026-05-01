@@ -1,0 +1,27 @@
+// Same field h.v used in the false branch of an if-else (different value).
+// Tests that "negative" path predicates (e.g. h.v != 1 ∧ h.v == 2) get
+// classified correctly: the positive Eq atom should win.
+struct h    { bit_8  v; bit_8  dummy; };
+struct p1   { bit_30 d; };
+struct p2   { bit_30 d; };
+
+struct {
+    struct h  h;
+    struct p1 p1;
+    struct p2 p2;
+} phv;
+
+int parse() {
+    Extract(phv.h);
+    if (phv.h.v == 1) {
+        Extract(phv.p1);
+        return ACCEPT;
+    }
+    else if (phv.h.v == 2) {
+        Extract(phv.p2);
+        return ACCEPT;
+    }
+    else {
+        return ACCEPT;
+    }
+}

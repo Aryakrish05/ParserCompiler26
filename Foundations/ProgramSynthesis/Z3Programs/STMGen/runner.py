@@ -18,10 +18,11 @@ argument_parser.add_argument("--max_entries", type=int, default=5)
 argument_parser.add_argument("--min_states", type=int, default=1)
 argument_parser.add_argument("--min_entries", type=int, default=0)
 argument_parser.add_argument("--debug", type=str, default="ON")
+argument_parser.add_argument("--not_always_extract", type=str, default="ON")
 
 args = argument_parser.parse_args()
 
-field_name_to_no_map,field_no_to_sizes_map,max_packet_size,default_phv,spec,constants,mask_constants,ternary_match = get_spec(args.input)
+field_name_to_no_map,field_no_to_sizes_map,max_packet_size,default_phv,spec,constants,mask_constants,ternary_match,max_field_size = get_spec(args.input)
 
 no_fields = len(field_name_to_no_map)
 
@@ -36,13 +37,13 @@ min_num_states = args.min_states
 min_num_entries = args.min_entries
 
 debug = True if (args.debug == "ON") else False
-max_field_size = max(field_no_to_sizes_map.values())
+not_always_extract = True if (args.not_always_extract == "ON") else False
 
 start=time.time()
 print(constants)
 print(mask_constants)
 print(field_name_to_no_map)
-table_entries,default_field,default_next_state = find_stm(field_sizes,default_phv,spec,min_num_states,max_num_states,min_num_entries,max_num_entries,max_packet_size,max_field_size,debug=debug,constant_synthesis=True,constants=constants,mask_constants=mask_constants,ternary_match=ternary_match)
+table_entries,default_field,default_next_state = find_stm(field_sizes,default_phv,spec,min_num_states,max_num_states,min_num_entries,max_num_entries,max_packet_size,max_field_size,debug=debug,constant_synthesis=False,constants=constants,mask_constants=mask_constants,ternary_match=ternary_match,not_always_extract=not_always_extract)
 end=time.time()
 print(end-start)
 

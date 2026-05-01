@@ -1,0 +1,36 @@
+// Translated from https://github.com/ParserHawk/ParserHawk/blob/main/z3/cegis_loop/SIGCOMM_expr/P4_examples/artifact_merge_split_nodes/artifact_merge_split_nodes.p4
+struct data_t {
+    bit_8  f8;
+    bit_4  f4;
+    bit_20 f20;
+};
+
+struct data1_t {
+    bit_8  f8;
+    bit_16 f16;
+};
+
+struct {
+    struct data_t  data;
+    struct data1_t data1;
+} phv;
+
+int parse() {
+    Extract(phv.data);
+    if (phv.data.f8 == 0) {
+        if (phv.data.f4 == 0) {
+            Extract(phv.data1);
+            return ACCEPT;
+        }
+        else if (phv.data.f4 == 1) {
+            Extract(phv.data1);
+            return ACCEPT;
+        }
+        else {
+            return ACCEPT;
+        }
+    }
+    else {
+        return ACCEPT;
+    }
+}

@@ -1,0 +1,20 @@
+
+struct h {
+    bit_16 leading;   
+    bit_8  type;      
+    bit_24 trailing;  
+};
+struct payload { bit_40 d; };
+
+struct {
+    struct h       h;
+    struct payload p;
+} phv;
+
+int parse() {
+    Extract(phv.h);
+    if (phv.h.type == 7) {
+        Extract(phv.p);
+    }
+    return ACCEPT;
+}

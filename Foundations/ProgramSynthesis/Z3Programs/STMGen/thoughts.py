@@ -206,10 +206,12 @@ int parse(){
 }
 SUCH CODES ARE NOT REALISTIC ??
 This causes three times repeat of header2
+PLEASE MENTION THIS IN REPORT
 '''
 
 '''
 TODO THINK - IS THE WAY WE ARE HANDLING != CORRECT !?
+Yes
 '''
 
 '''
@@ -245,7 +247,8 @@ the STMGenerator -
 
 Get more counterexamples but run faster ??
 
-Cause we have something like a universal quantification - which is pretty bad
+Cause we have something like a universal quantification - We don't :(.
+What we had is stupid
 
 TODO -
 Instead of calling the Z3 spec, can I just simulate it in python quickly??
@@ -263,6 +266,7 @@ Also to think about ---
 Why is there an improvement eventhough I am creating a new solver instance everytime!!!
 This is the most counterintuitive thing ever...
 '''
+
 '''
 Constrain the state transitions,
 UNSAT core

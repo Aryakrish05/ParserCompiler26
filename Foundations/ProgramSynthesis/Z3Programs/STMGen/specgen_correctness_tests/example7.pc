@@ -1,0 +1,15 @@
+int parse(){
+    Extract(f0,4);
+    Extract(f1,4);
+    if((f0&5)==1){
+        if((f1&10)==8){
+            Extract(f3,1);
+        }
+    }
+    if((f1&10)==2){
+        if((f0&5)==4){
+            Extract(f4,1);
+        }
+    }
+    return ACCEPT;
+}

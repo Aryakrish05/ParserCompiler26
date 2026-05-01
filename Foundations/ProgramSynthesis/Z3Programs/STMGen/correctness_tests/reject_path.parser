@@ -1,0 +1,21 @@
+// Has a REJECT terminal — exercises the reject_id wiring in the stitched
+// graph and the OK/MISMATCH outcome check across both terminals.
+struct h    { bit_8 v; bit_8 dummy; };
+struct good { bit_30 d; };
+
+struct {
+    struct h    h;
+    struct good g;
+} phv;
+
+int parse() {
+    Extract(phv.h);
+    if (phv.h.v == 0) {
+        return REJECT;
+    }
+    if (phv.h.v == 1) {
+        Extract(phv.g);
+        return ACCEPT;
+    }
+    return ACCEPT;
+}

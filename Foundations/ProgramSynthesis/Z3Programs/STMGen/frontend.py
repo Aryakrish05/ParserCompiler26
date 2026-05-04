@@ -173,8 +173,8 @@ class Collector(ast.NodeVisitor):
     
     def visit_Compound(self,n:ast.Compound):
         if(n.block_items is None):
-            return None
-        
+            raise CompilationError("Blocks cannot be empty")
+
         for x in n.block_items:
             if(not (isinstance(x,ast.If) or isinstance(x,ast.FuncCall) or isinstance(x,ast.Return))):
                 raise CompilationError("In a block, you can have only extracts,if-statements and returns")
@@ -234,7 +234,6 @@ class Collector(ast.NodeVisitor):
         if(isinstance(condition[1],list)):
             match_field_tuple = condition[1][1]
             match_mask = condition[1][2]
-            self.ternary_match = True
             if(condition[1][0]!="&"):
                 raise CompilationError("The only operator allowed for ternary matching is & and it should be used once")
         
@@ -256,7 +255,7 @@ class NotCompared(FieldInfo):
 class Exact(FieldInfo):
     def __init__(self, constants,size,cmpname):
         super().__init__(size,cmpname)
-        self.old_constants = constants
+        self.old_constants = list(set(constants))
         self.new_constants = list(self.old_constants)
 
 #For now we don't support modifications in ternary matched fields
@@ -271,9 +270,30 @@ class Ternary(FieldInfo):
 class Info:
     def __init__(self,attr_to_info,phvmem_to_new_contents,old_phv_members,old_struct_decls):
         self.attr_to_info = attr_to_info
-        self.phvmem_new_contents = phvmem_to_new_contents#List of new cmpnames in the phvmem
+        self.phvmem_new_contents = phvmem_to_new_contents#List of names in the phvmem
         self.old_phv_members = old_phv_members
         self.old_struct_decls = old_struct_decls
+        self.all_field_nos = {}
+        self.compared_field_nos = {}
+    
+    def fill_field_nos(self):
+        self.all_field_nos = {}
+        self.compared_field_nos = {}
+        useful_ptr = 0
+        all_ptr = 0
+        for phv_member in self.phvmem_new_contents:
+            for field in self.phvmem_new_contents[phv_member]:
+                attr = (phv_member,field)
+                if ( attr not in self.all_field_nos):
+                    self.all_field_nos[attr] = all_ptr
+                    all_ptr += 1
+                if (not isinstance(self.attr_to_info[attr],NotCompared) and 
+                    attr not in self.compared_field_nos):
+                    self.compared_field_nos[attr] = useful_ptr
+                    useful_ptr += 1
+                    
+    def is_compared(self,attr):
+        return not isinstance(self.attr_to_info[attr],NotCompared)   
     
     def get_new_constant(self,attr,c):
         assert(not isinstance(self.attr_to_info[attr],NotCompared))
@@ -317,7 +337,25 @@ class Info:
     
     def get_old_size(self,attr):
         return self.attr_to_info[attr].old_size
+
+    def get_no_from_attr_all(self,attr):
+        return self.all_field_nos[attr]
     
+    def get_no_from_attr_compared(self,attr):
+        return self.compared_field_nos[attr]
+    
+    def get_attr_from_no_compared(self,no):
+        for (k,v) in self.compared_field_nos.items():
+            if(v==no):
+                return k
+        assert(False)
+    
+    def get_attr_from_no_all(self,no):
+        for (k,v) in self.all_field_nos.items():
+            if(v==no):
+                return k
+        assert(False)
+        
 def collect_info(file_ast,widths):
     collector = Collector(widths)
     collector.visit(file_ast)
@@ -346,7 +384,7 @@ def collect_info(file_ast,widths):
                 attr_to_info[(phv_mem,field)] = NotCompared(size,cmpname)
             
         phvmem_to_new_contents[phv_mem] = list(field for (field,_) in collector.struct_decls[collector.phv_members[phv_mem]])
-    
+
     return Info(attr_to_info,phvmem_to_new_contents,collector.phv_members,collector.struct_decls)
             
             
@@ -450,7 +488,7 @@ class IRGen(ast.NodeVisitor):
             self.visit(n.iffalse)
     
 def reduce_exact_size(field:Exact):
-    field.new_size = math.ceil(math.log(len(field.old_constants)+1))
+    field.new_size = math.ceil(math.log2(len(field.old_constants)+1)) + 1
     for i in range(len(field.new_constants)):
         field.new_constants[i] = i
 
@@ -488,12 +526,17 @@ def best_modifier(info):
     reduce_all_sizes(info)
     drop_unused_members(info)
     return info
+
+def no_size_reduction_modifier(info):
+    drop_unused_members(info)
+    return info
             
 def compile_to_pc(in_path, out_path, modifier=best_modifier):
     file_ast, widths = parse_source(in_path)
     info = collect_info(file_ast,widths)
     if (modifier is not None):
         info = modifier(info)
+    info.fill_field_nos()
     with open(out_path, 'w') as f:
         IRGen(info, f).visit(file_ast)
     return info
@@ -503,6 +546,8 @@ if __name__ == '__main__':
         print('Usage: frontend.py <file.parser>', file=sys.stderr)
         sys.exit(1)
     src = sys.argv[1]
-    out = str(Path(src).with_suffix('')) + '.gen.pc'
+    build_dir = Path('_build')
+    build_dir.mkdir(exist_ok=True)
+    out = str(build_dir / (Path(src).stem + '.gen.pc'))
     compile_to_pc(src, out)
     print(f'wrote {out}')

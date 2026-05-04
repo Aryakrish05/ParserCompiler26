@@ -1,0 +1,11 @@
+int parse () {
+     Extract(sel_v_0,1);
+     Extract(s1_d_2,1);
+     Extract(s2_d_3,1);
+     Extract(s3_d_4,1);
+     if(sel_v_0==0)
+     {
+         Extract(opt_d_5,1);
+     }
+     return ACCEPT;
+ }

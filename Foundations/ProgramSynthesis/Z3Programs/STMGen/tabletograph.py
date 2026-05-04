@@ -62,6 +62,6 @@ def render_parse_graph(table_entries,default_field,default_next_state,field_name
             else:
                 parse_graph.edge(f'Node{table_entries[i][0]}',f'Node{table_entries[i][1]}',label=f'v={table_entries[i][2]}')
             
-    parse_graph.render(directory='./doctest-output', view=True)
+    parse_graph.render(directory='./doctest-output', view=False)
 
             

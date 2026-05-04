@@ -1,0 +1,21 @@
+int parse () {
+     Extract(hdr1_f0_0,8);
+     Extract(hdr2_f0_2,8);
+     Extract(hdr3_f0_5,32);
+     if(hdr1_f0_0==10)
+     {
+         if(hdr2_f0_2==5)
+         {
+             Extract(hdr4_f0_6,32);
+         }
+     }
+     else
+     if(hdr1_f0_0==15)
+     {
+         if(hdr2_f0_2==2)
+         {
+             Extract(hdr4_f0_6,32);
+         }
+     }
+     return ACCEPT;
+ }

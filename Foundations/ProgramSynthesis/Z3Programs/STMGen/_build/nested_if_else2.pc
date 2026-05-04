@@ -1,0 +1,17 @@
+int parse () {
+     Extract(h0_f0_0,4);
+     if((h0_f0_0&6)==4)
+     {
+         Extract(h1_f1_1,4);
+         if((h0_f0_0&15)==12)
+         {
+             Extract(h2_f2_2,4);
+         }
+         else
+         if((h0_f0_0&3)==3)
+         {
+             Extract(h3_f3_3,4);
+         }
+     }
+     return ACCEPT;
+ }

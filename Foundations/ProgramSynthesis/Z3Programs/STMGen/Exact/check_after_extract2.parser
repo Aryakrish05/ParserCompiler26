@@ -1,0 +1,42 @@
+// max_packet_size = 72
+
+struct hdr1{
+    bit_8 f0;
+    bit_8 f1;
+};
+struct hdr2{
+    bit_8 f0;
+    bit_8 f1;
+    bit_8 f2;
+};
+struct hdr3{
+    bit_32 f0;
+};
+
+struct hdr4{
+    bit_32 f0;
+};
+
+struct {
+    struct hdr1 hdr1;
+    struct hdr2 hdr2;
+    struct hdr3 hdr3;
+    struct hdr4 hdr4;
+} phv;
+
+int parse(){
+    Extract(phv.hdr1);
+    Extract(phv.hdr2);
+    Extract(phv.hdr3);
+    if(phv.hdr1.f0 == 10){
+        if(phv.hdr2.f0 == 5){
+            Extract(phv.hdr4);
+        }
+    }
+    else if(phv.hdr1.f0 == 15){
+        if(phv.hdr2.f0 == 2){
+            Extract(phv.hdr4);
+        }
+    }
+    return ACCEPT;
+}

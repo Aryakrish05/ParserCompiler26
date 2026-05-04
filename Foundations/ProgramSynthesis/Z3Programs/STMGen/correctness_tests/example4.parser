@@ -13,6 +13,7 @@ int parse() {
     if (phv.struct1.field0 == 3) {
         Extract(phv.struct2);
         if (phv.struct2.field1 == 1) {
+            return ACCEPT;
         }
     }
     Extract(phv.struct3);

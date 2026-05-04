@@ -4,7 +4,7 @@ class State:
     def __init__(self):
         self.field_used = None #must be a (phv_member,field) pair
         self.is_extraction = False
-        self.transitions = [] # A list of (mask_or_None,value,next_state)
+        self.transitions = [] # A list of (mask_or_None,value,next_state),default transition if both are None
         self.is_accept = False
         self.is_reject = False
 
@@ -118,50 +118,10 @@ def print_parser(info:Info,states:list[State]):
     print("}")
     
 def emit_p4(info:Info,states:list[State]):
+    print("#include <core.p4>")
+    print("#include <v1model.p4>")
     print_headers(info)
     phv_order = print_phv(info)
     print("struct metadata_t { }")
     print_parser(info,states)
     print_boiler_plate(phv_order)
-
-if __name__ == "__main__":
-    old_struct_decls = {
-        "ethernet_t": [("dstAddr", 48), ("srcAddr", 48), ("etherType", 16)],
-        "ipv4_t": [
-            ("version", 4), ("ihl", 4), ("tos", 8), ("totalLen", 16),
-            ("id", 16), ("flags", 3), ("fragOffset", 13), ("ttl", 8),
-            ("protocol", 8), ("hdrChecksum", 16),
-            ("srcAddr", 32), ("dstAddr", 32),
-        ],
-    }
-    old_phv_members = {"eth": "ethernet_t", "ipv4": "ipv4_t"}
-
-    # attr_to_info / phvmem_new_contents are unused by p4gen, pass empty stubs.
-    info = Info({}, {}, old_phv_members, old_struct_decls)
-
-    # state 0: start — extract eth, select on etherType
-    s0 = State()
-    s0.is_extraction = True
-    s0.field_used = ("eth", "etherType")
-    s0.transitions = [
-        (None, 0x0800, 2),   # IPv4 -> state_2
-        (0xF000, 0x8000, 3), # ternary example -> reject
-        (None, None, 1),     # default -> accept
-    ]
-
-    # state 1: accept
-    s1 = State(); s1.is_accept = True
-
-    # state 2: extract ipv4, branch on version
-    s2 = State()
-    s2.is_extraction = True
-    s2.field_used = ("ipv4", "version")
-    s2.transitions = [
-        (None, 4, 1),        # v4 -> accept
-        (None, None, 3),     # default -> reject
-    ]
-
-    # state 3: reject
-    s3 = State(); s3.is_reject = True
-
-    emit_p4(info, [s0, s1, s2, s3])

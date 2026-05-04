@@ -1,7 +1,7 @@
-struct field0 { bit_5 v; };
-struct field1 { bit_1 v; };
-struct field2 { bit_1 v; };
-struct field3 { bit_2 v; };
+struct field0 { bit_5 v;bit_3 bruh; };
+struct field1 { bit_1 v; bit_7 bruh;};
+struct field2 { bit_1 v; bit_7 bruh;};
+struct field3 { bit_2 v;bit_6 bruh; };
 
 struct  {
     struct field0 field0;

@@ -1,0 +1,23 @@
+int parse () {
+     Extract(struct1_field0_0,8);
+     if((struct1_field0_0&3)==2)
+     {
+         Extract(struct2_field1_1,32);
+         if(struct2_field1_1==1)
+         {
+             Extract(struct3_field2_2,32);
+         }
+         else
+         {
+             Extract(struct4_field3_3,32);
+         }
+     }
+     else
+     if(struct1_field0_0==5)
+     {
+         Extract(struct3_field2_2,32);
+         Extract(struct4_field3_3,32);
+     }
+     Extract(struct5_field4_4,32);
+     return ACCEPT;
+ }

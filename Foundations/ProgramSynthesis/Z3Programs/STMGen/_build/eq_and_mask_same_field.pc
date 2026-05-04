@@ -1,0 +1,14 @@
+int parse () {
+     Extract(h_v_0,8);
+     if(h_v_0==5)
+     {
+         Extract(p1_d_2,1);
+         return ACCEPT;
+     }
+     if((h_v_0&3)==1)
+     {
+         Extract(p2_d_3,1);
+         return ACCEPT;
+     }
+     return ACCEPT;
+ }

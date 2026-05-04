@@ -7,7 +7,7 @@ from enum import Enum
     #accept state is no_states
     #reject state is no_states+1
 
-set_param('verbose', 10)
+set_param('verbose', 0)
 
 class STMNotFoundError(Exception):
     pass
@@ -92,6 +92,13 @@ class STMGenerator(STMSolver):
                     pass
                 else:
                     constraints.append(Implies(self.entry_state[i]==self.entry_state[j],self.entry_match_value[i]!=self.entry_match_value[j]))
+
+        #ternary well-formedness: value must have no bits outside mask, otherwise
+        #(phv & mask) == value is unsatisfiable in Z3 (entry is dead) but P4
+        #emits `value &&& mask` which interprets value & mask, flipping behavior.
+        if(self.ternary_match):
+            for i in range(table_size):
+                constraints.append(self.entry_match_value[i] & ~self.entry_match_mask[i] == 0)
                 
             
         self.solver.add(constraints)
@@ -372,7 +379,8 @@ def find_stm(field_sizes,initial_phv,spec,min_num_states,max_num_states,min_num_
     #TODO - add certain fields which are for ternary matches - can we detect this also statically
     for table_size in range(min_num_entries,max_num_entries+1):
         for no_states in range(min_num_states,max_num_states+1):
-            print(f"no_states={no_states} && table_size={table_size}")
+            if(debug):
+                print(f"no_states={no_states} && table_size={table_size}")
             stm = STMGenerator(table_size,no_states,len(field_sizes),max_packet_size,max_field_size,ordering_type,ternary_match,not_always_extract)
 
             if(constant_synthesis):

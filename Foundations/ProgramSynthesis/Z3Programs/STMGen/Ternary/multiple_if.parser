@@ -1,0 +1,20 @@
+
+struct h { bit_8 v; bit_8 dummy; };
+struct p_a { bit_20 d; };
+struct p_b { bit_20 d; };
+struct p_c { bit_20 d; };
+
+struct {
+    struct h   h;
+    struct p_a a;
+    struct p_b b;
+    struct p_c c;
+} phv;
+
+int parse() {
+    Extract(phv.h);
+    if ((phv.h.v & 7) == 1) { Extract(phv.a); return ACCEPT; }
+    if ((phv.h.v & 7) == 2) { Extract(phv.b); return ACCEPT; }
+    if ((phv.h.v & 7) == 4) { Extract(phv.c); return ACCEPT; }
+    return REJECT;
+}

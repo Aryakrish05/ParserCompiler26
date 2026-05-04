@@ -1,0 +1,45 @@
+int parse () {
+     Extract(ethernet_ethertype_2,1);
+     if(ethernet_ethertype_2==0)
+     {
+         Extract(ipv4_protocol_10,1);
+         if(ipv4_protocol_10==0)
+         {
+             Extract(gre_K_16,1);
+             Extract(gre_proto_22,2);
+             if(gre_K_16==0)
+             {
+                 if(gre_proto_22==0)
+                 {
+                     Extract(nvgre_tni_23,1);
+                     Extract(inner_ethernet_dst_mac_36,1);
+                     return ACCEPT;
+                 }
+                 else
+                 {
+                     return ACCEPT;
+                 }
+             }
+             else
+             {
+                 if(gre_proto_22==1)
+                 {
+                     Extract(inner_ipv4_version_25,1);
+                     return ACCEPT;
+                 }
+                 else
+                 {
+                     return ACCEPT;
+                 }
+             }
+         }
+         else
+         {
+             return ACCEPT;
+         }
+     }
+     else
+     {
+         return REJECT;
+     }
+ }

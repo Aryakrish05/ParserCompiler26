@@ -1,0 +1,28 @@
+//max_packet_size = 56
+
+struct hdr0 { bit_16 f0; };
+struct hdr1 { bit_16 f1; };
+struct hdr2 { bit_16 f2; };
+struct hdr3 { bit_16 f2; };
+struct tail { bit_8 f0; bit_16 f1; };
+
+struct {
+    struct hdr0 hdr0;
+    struct tail tail;
+    struct hdr1 hdr1;
+    struct hdr2 hdr2;
+    struct hdr3 hdr3;
+} phv;
+
+int parse() {
+    Extract(phv.hdr0);
+    Extract(phv.hdr1);
+    if (phv.hdr0.f0 == 2) {
+        Extract(phv.hdr2);
+    }
+    if(phv.hdr1.f1 == 3){
+        Extract(phv.hdr3);
+    }
+    Extract(phv.tail);
+    return ACCEPT;
+}

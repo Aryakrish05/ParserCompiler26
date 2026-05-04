@@ -1,0 +1,9 @@
+int parse () {
+     Extract(hdr0_f0_0,1);
+     if(hdr0_f0_0==0)
+     {
+         Extract(hdr1_f1_3,1);
+     }
+     Extract(tail_f0_1,1);
+     return ACCEPT;
+ }

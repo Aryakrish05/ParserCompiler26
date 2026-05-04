@@ -1,0 +1,13 @@
+int parse () {
+     Extract(field0_v_0,4);
+     if((field0_v_0&5)==0)
+     {
+         Extract(field1_v_1,1);
+     }
+     else
+     {
+         Extract(field3_v_3,1);
+     }
+     Extract(field2_v_2,1);
+     return REJECT;
+ }

@@ -1,0 +1,15 @@
+int parse () {
+     Extract(ethernet_type_2,2);
+     Extract(pain1_bruhhhh_6,1);
+     Extract(pain2_bruhhhh_7,1);
+     if(ethernet_type_2==0)
+     {
+         Extract(ipv4_bruh_4,1);
+     }
+     else
+     if(ethernet_type_2==1)
+     {
+         Extract(arp_bruh_5,1);
+     }
+     return ACCEPT;
+ }

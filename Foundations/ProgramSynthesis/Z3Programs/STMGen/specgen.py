@@ -44,209 +44,201 @@ from z3 import *
 
 import pycparser.c_ast as ast
 import copy
+from pathlib import Path
 from pycparser import parse_file
+from frontend import * #import everything including CompilationError
 
 #TODO - get rid of tuples and use dataclasses for better readability
 #TODO - document how the flow of values happen in the design - need forc cur_phv
 
-class CompilationError(Exception):
-    pass
-    
 class CFGNode:
-    
+
     def print(self,indent):
         raise NotImplementedError
-    
+
     #call only after doing get_max_packet_size
-    def make_spec(self,cur_phv,default_phv,ptr,field_no_to_sizes_map,max_field_size,packet):
+    def make_spec(self,cur_phv,default_phv,ptr,info,drop_uncompared,max_field_size,packet):
         #cur_phv contains the expressions for the fields on the active path
-        #default_phv contains the defaults - we just say all 0's for now, but user can choose
+        #default_phv contains the defaults - all sentinel for now, but user can choose
         #ptr contains the packet pointer till now
-        #returns two things, a list of expressions for fields and an expression for ptr
-        
-        #NOTE that we shall tack on an ifthenelse condition when we have backtracked to a IfThenElse
-        
+        #info: frontend.Info — source of truth for sizes and attr->fno maps
+        #drop_uncompared: True -> uncompared attrs are wire-skips (not in synth phv);
+        #         False -> every attr is in synth phv
         raise NotImplementedError
 
-    def get_max_packet_size(self,ptr,fields_extracted,field_no_to_sizes_map):
-        #fields_extracted contains if the field has been extracted on the current path
+    def get_max_packet_size(self,ptr,fields_extracted,info,drop_uncompared):
+        #For validation this should be called with drop_uncompared=False so every extract
         raise NotImplementedError
-    
+
 class EntryNode(CFGNode):
     def __init__(self):
         self.next = None
-    
+
     def print(self,indent=0):
         print(" "*indent,"Entry")
         assert(self.next is not None)
         self.next.print(indent+4)
-    
-    def make_spec(self, cur_phv, default_phv, ptr, field_no_to_sizes_map, max_field_size,packet):
+
+    def make_spec(self, cur_phv, default_phv, ptr, info, drop_uncompared, max_field_size, packet):
         assert(self.next is not None)
-        return self.next.make_spec(cur_phv,default_phv,ptr,field_no_to_sizes_map,max_field_size,packet)
-        
-    def get_max_packet_size(self, ptr, fields_extracted, field_no_to_sizes_map):
+        return self.next.make_spec(cur_phv,default_phv,ptr,info,drop_uncompared,max_field_size,packet)
+
+    def get_max_packet_size(self, ptr, fields_extracted, info, drop_uncompared):
         assert(self.next is not None)
-        return self.next.get_max_packet_size(ptr,fields_extracted,field_no_to_sizes_map)
-    
+        return self.next.get_max_packet_size(ptr,fields_extracted,info,drop_uncompared)
+
 class ExtractNode(CFGNode):
-    def __init__(self,extract_field_no):
-        self.extract_field_no = extract_field_no
+    def __init__(self,attr):
+        self.attr = attr
         self.next = None
-    
+
     def print(self,indent):
-        print(" "*indent,f"Extract(field{self.extract_field_no})")
+        print(" "*indent,f"Extract({self.attr})")
         assert(self.next is not None)
         self.next.print(indent+4)
-        
-    def get_max_packet_size(self,ptr,fields_extracted,field_no_to_sizes_map):
-        if(fields_extracted[self.extract_field_no]):
-            raise CompilationError("You must not extract the same field at two different places on the same path")
-        
-        assert(self.next is not None)
-        fields_extracted[self.extract_field_no] = True
-        max_ptr_next = self.next.get_max_packet_size(ptr+field_no_to_sizes_map[self.extract_field_no],fields_extracted,field_no_to_sizes_map)
-        fields_extracted[self.extract_field_no] = False
-        return max_ptr_next
-        
-    def make_spec(self, cur_phv, default_phv, ptr, field_no_to_sizes_map, max_field_size,packet):
-        #no need to take backup here as i am the first person to modify, just reset the cur_phv value to default_phv -> or lite doesn't matter
 
-        cur_field_sz = field_no_to_sizes_map[self.extract_field_no]
-        cur_phv[self.extract_field_no] = ZeroExt(max_field_size-cur_field_sz,Extract(ptr+cur_field_sz-1,ptr,packet))
+    def get_max_packet_size(self,ptr,fields_extracted,info,drop_uncompared):
         assert(self.next is not None)
-        res_phv,res_state = self.next.make_spec(cur_phv,default_phv,ptr+cur_field_sz,field_no_to_sizes_map,max_field_size,packet)
-        res_phv[self.extract_field_no] = ZeroExt(max_field_size-cur_field_sz,Extract(ptr+cur_field_sz-1,ptr,packet))
+        sz = info.get_new_size(self.attr)
+        
+        if drop_uncompared and not info.is_compared(self.attr):
+            return self.next.get_max_packet_size(ptr+sz,fields_extracted,info,drop_uncompared)
+        
+        fno = info.get_no_from_attr_compared(self.attr) if drop_uncompared else info.get_no_from_attr_all(self.attr)
+        
+        if(fields_extracted[fno]):
+            raise CompilationError("You must not extract the same field at two different places on the same path")
+        fields_extracted[fno] = True
+        max_ptr_next = self.next.get_max_packet_size(ptr+sz,fields_extracted,info,drop_uncompared)
+        fields_extracted[fno] = False
+        return max_ptr_next
+
+    def make_spec(self, cur_phv, default_phv, ptr, info, drop_uncompared, max_field_size, packet):
+        assert(self.next is not None)
+        sz = info.get_new_size(self.attr)
+
+        if drop_uncompared and not info.is_compared(self.attr):
+            return self.next.make_spec(cur_phv,default_phv,ptr+sz,info,drop_uncompared,max_field_size,packet)
+
+        fno = info.get_no_from_attr_compared(self.attr) if drop_uncompared else info.get_no_from_attr_all(self.attr)
+        cur_phv[fno] = ZeroExt(max_field_size-sz,Extract(ptr+sz-1,ptr,packet))
+        res_phv,res_state = self.next.make_spec(cur_phv,default_phv,ptr+sz,info,drop_uncompared,max_field_size,packet)
+        res_phv[fno] = ZeroExt(max_field_size-sz,Extract(ptr+sz-1,ptr,packet))
         return (res_phv,res_state)
 
 class IfThenElseNode(CFGNode):
-    def __init__(self,check_field_no,equality_value,mask=None,ternary_match=False):
+    def __init__(self,check_attr,equality_value,mask=None,ternary_match=False):
         self.ternary_match = ternary_match
         self.mask = mask
         if(self.ternary_match and mask is None):
             raise ValueError("IfThenElseNode constructor: you need to provide mask if it is ternary")
-        self.check_field_no = check_field_no
+        # check_attr is always a compared attr (you can only branch on compared fields).
+        self.check_attr = check_attr
         self.value = equality_value
         self.next_true = None
         self.next_false = None
-    
+
     def print(self,indent):
         if(self.ternary_match):
-            print(" "*indent,f"If((field{self.check_field_no}&{self.mask})=={self.value})")
+            print(" "*indent,f"If(({self.check_attr}&{self.mask})=={self.value})")
         else:
-            print(" "*indent,f"If(field{self.check_field_no}=={self.value})")
+            print(" "*indent,f"If({self.check_attr}=={self.value})")
         assert(self.next_true is not None)
         print(" "*indent,"IfTrue:")
         self.next_true.print(indent+4)
         assert(self.next_false is not None)
         print(" "*indent,"IfFalse:")
         self.next_false.print(indent+4)
-        
-    def get_max_packet_size(self, ptr, fields_extracted, field_no_to_sizes_map):
-        if(not fields_extracted[self.check_field_no]):
+
+    def get_max_packet_size(self, ptr, fields_extracted, info, drop_uncompared):
+        # check_attr is always compared, so it lives in both maps.
+        fno = info.get_no_from_attr_compared(self.check_attr) if drop_uncompared else info.get_no_from_attr_all(self.check_attr)
+        if(not fields_extracted[fno]):
             raise CompilationError("You must extract a field before checking on it in all possible paths")
-        
         assert(self.next_true is not None)
-        true_max_ptr = self.next_true.get_max_packet_size(ptr,fields_extracted,field_no_to_sizes_map)
-        
+        true_max_ptr = self.next_true.get_max_packet_size(ptr,fields_extracted,info,drop_uncompared)
         assert(self.next_false is not None)
-        false_max_ptr = self.next_false.get_max_packet_size(ptr,fields_extracted,field_no_to_sizes_map)
-        
+        false_max_ptr = self.next_false.get_max_packet_size(ptr,fields_extracted,info,drop_uncompared)
         return max(true_max_ptr,false_max_ptr)
-        
-    def make_spec(self, cur_phv, default_phv, ptr, field_no_to_sizes_map, max_field_size, packet):
-        
-        
+
+    def make_spec(self, cur_phv, default_phv, ptr, info, drop_uncompared, max_field_size, packet):
+        fno = info.get_no_from_attr_compared(self.check_attr) if drop_uncompared else info.get_no_from_attr_all(self.check_attr)
         assert(self.next_true is not None)
-        true_res_phv,true_res_state = self.next_true.make_spec(cur_phv,default_phv,ptr,field_no_to_sizes_map,max_field_size,packet)
+        true_res_phv,true_res_state = self.next_true.make_spec(cur_phv,default_phv,ptr,info,drop_uncompared,max_field_size,packet)
         assert(self.next_false is not None)
-        false_res_phv,false_res_state = self.next_false.make_spec(cur_phv,default_phv,ptr,field_no_to_sizes_map,max_field_size,packet)
-        
+        false_res_phv,false_res_state = self.next_false.make_spec(cur_phv,default_phv,ptr,info,drop_uncompared,max_field_size,packet)
         res_phv = []
         for i in range(len(true_res_phv)):
             if(self.ternary_match):
-                res_phv.append(If((cur_phv[self.check_field_no]&self.mask)==self.value,true_res_phv[i],false_res_phv[i]))
+                res_phv.append(If((cur_phv[fno]&self.mask)==self.value,true_res_phv[i],false_res_phv[i]))
             else:
-                res_phv.append(If(cur_phv[self.check_field_no]==self.value,true_res_phv[i],false_res_phv[i]))
+                res_phv.append(If(cur_phv[fno]==self.value,true_res_phv[i],false_res_phv[i]))
         if(self.ternary_match):
-            res_state = If((cur_phv[self.check_field_no]&self.mask)==self.value,true_res_state,false_res_state)
+            res_state = If((cur_phv[fno]&self.mask)==self.value,true_res_state,false_res_state)
         else:
-            res_state = If(cur_phv[self.check_field_no]==self.value,true_res_state,false_res_state)
-
+            res_state = If(cur_phv[fno]==self.value,true_res_state,false_res_state)
         return (res_phv,res_state)
-    
+
 class ExitNode(CFGNode):
     def __init__(self,exit_type):
         if(exit_type=="ACCEPT"):
             self.accept_or_reject = True
         else:
             self.accept_or_reject = False
-    
+
     def print(self,indent):
         print(" "*indent,"ACCEPT" if self.accept_or_reject else "REJECT")
-        
-    def get_max_packet_size(self, ptr, fields_extracted, field_no_to_sizes_map):
+
+    def get_max_packet_size(self, ptr, fields_extracted, info, drop_uncompared):
         return ptr
-        
-    def make_spec(self, cur_phv, default_phv, ptr,field_no_to_sizes_map, max_field_size, packet):
+
+    def make_spec(self, cur_phv, default_phv, ptr, info, drop_uncompared, max_field_size, packet):
         return (copy.deepcopy(default_phv),self.accept_or_reject)
 
 class CFGGenerator(ast.NodeVisitor):
-    def __init__(self):
+    def __init__(self,info:Info):
         super().__init__()
-        self.field_name_to_no_map = {}
-        self.field_no_to_sizes_map = {}
+        self.info = info
         self.constants = []
         self.mask_constants = []
-        self.max_fields = 0
         self.ternary_match = False
-        
+
     def generic_visit(self, node: ast.Node):
         raise CompilationError("The code doesn't adhere to the specification, use only allowed constructs")
-    
+
     def visit_Constant(self,n:ast.Constant):
         return int(n.value)
 
     def visit_ID(self,n:ast.ID):
         return n.name
-    
+
     def visit_ExprList(self,n:ast.ExprList):
         if(len(n.exprs)!=2):
             raise CompilationError("Extract requires exactly 2 arguments, field to be extracted and its size")
-        
+
         if(not isinstance(n.exprs[0],ast.ID)):
             raise CompilationError("Extract's first argument must be field name, an Identifier")
-        
+
         if(not isinstance(n.exprs[1],ast.Constant)):
             raise CompilationError("Extract's second argument must be the field size, an Integer constant")
-        
+
         return (self.visit(n.exprs[0]),self.visit(n.exprs[1]))
-    
+
     def visit_FuncCall(self,n:ast.FuncCall):
-        
+
         if(n.name.name!='Extract' or n.args is None):
             raise CompilationError("Calls to functions other than Extract not permitted")
-        
+
         args = self.visit(n.args)
-        
         assert(isinstance(args,tuple))
-                
-        if (args[0] not in self.field_name_to_no_map):
-            self.field_name_to_no_map[args[0]] = self.max_fields
-            self.max_fields += 1
-        
-        field_no = self.field_name_to_no_map[args[0]]
-        
-        if(args[1] <= 0):
-            raise CompilationError("Size of a field must be +ve")
-        
-        if(field_no in self.field_no_to_sizes_map and self.field_no_to_sizes_map[field_no]!=args[1]):
-            raise CompilationError("A given field must have a unique fixed size")
-        
-        self.field_no_to_sizes_map[field_no] = args[1]
-        
-        extraction_node = ExtractNode(field_no)
-        
+
+        cmpname = args[0]
+        attr = self.info.get_attr_from_cmpname(cmpname)
+
+        if(args[1] != self.info.get_new_size(attr)):
+            raise CompilationError(f"Size mismatch for {cmpname}: pc={args[1]} info={self.info.get_new_size(attr)}")
+
+        extraction_node = ExtractNode(attr)
         return (extraction_node,[(extraction_node,"next")])
     
     
@@ -294,15 +286,14 @@ class CFGGenerator(ast.NodeVisitor):
             if(condition[1][0]!="&"):
                 raise CompilationError("The only operator allowed for ternary matching is & and it should be used once")
         
-        if(match_field_name not in self.field_name_to_no_map):
-            raise CompilationError("You must extract a field before checking on it in all possible paths")
-        
+        match_attr = self.info.get_attr_from_cmpname(match_field_name)
+
         if(match_mask is None):
-            if_node = IfThenElseNode(self.field_name_to_no_map[match_field_name],match_value)
+            if_node = IfThenElseNode(match_attr,match_value)
         else:
-            if_node = IfThenElseNode(self.field_name_to_no_map[match_field_name],match_value,match_mask,True)
+            if_node = IfThenElseNode(match_attr,match_value,match_mask,True)
             self.mask_constants.append(match_mask)
-            
+
         self.constants.append(match_value)
         
         end_nodes = []
@@ -380,57 +371,51 @@ class CFGGenerator(ast.NodeVisitor):
     def visit_FileAST(self,n:ast.FileAST):
         if(n.ext is None or len(n.ext)!=1 or not isinstance(n.ext[0],ast.FuncDef)):
             raise CompilationError("Exactly one function expected")
-        
-        entry_node = self.visit(n.ext[0])
-        
-        assert(entry_node is not None)
-        
-        return entry_node,self.field_name_to_no_map,self.field_no_to_sizes_map,self.constants,self.mask_constants,self.ternary_match
-    
 
-def get_spec(filename):
-    file_ast = parse_file(filename)
-    cfg_gen = CFGGenerator()
+        entry_node = self.visit(n.ext[0])
+        assert(entry_node is not None)
+        return entry_node,self.constants,self.mask_constants,self.ternary_match
+
+
+def get_spec(parser_filename, drop_uncompared, field_min=True):
+
+    build_dir = Path('_build')
+    build_dir.mkdir(exist_ok=True)
+    pc_filename = str(build_dir / (Path(parser_filename).stem + '.pc'))
+    modifier = best_modifier if field_min else no_size_reduction_modifier
+    info = compile_to_pc(parser_filename, pc_filename, modifier=modifier)
+
+    file_ast = parse_file(pc_filename)
+    cfg_gen = CFGGenerator(info)
     res = cfg_gen.visit(file_ast)
-    
     assert(res is not None)
-    
-    entry,field_name_to_no_map,field_no_to_sizes_map,constants,mask_constants,ternary_match = res
-    no_fields = len(field_no_to_sizes_map)
-    #+1 for the sentinel high bit: phv values for unextracted fields stay at -1
-    #(all 1s), while any zero-extended extracted value has high bit 0, so
-    #equality with the sentinel is sound for "not yet extracted".
-    max_field_size = max(field_no_to_sizes_map.values()) + 1
+    entry,constants,mask_constants,ternary_match = res
+
+    selected_map = info.compared_field_nos if drop_uncompared else info.all_field_nos
+    no_fields = len(selected_map)
+    is_straight_line = (no_fields == 0)
+    if is_straight_line:
+        # No synthesis now :)
+        max_field_size = 0
+        cur_phv = []
+        default_phv = []
+        default_phv_padded = []
+    else:
+        max_field_size = max(info.get_new_size(attr) for attr in selected_map) + 1
+        sentinel = BitVecVal(1<<(max_field_size-1), max_field_size)
+        cur_phv             = [sentinel for _ in range(no_fields)]
+        default_phv         = [sentinel for _ in range(no_fields)]
+        default_phv_padded  = [sentinel for _ in range(no_fields)]
 
     if(ternary_match):
         mask_constants.append((1<<max_field_size)-1)
 
-    cur_phv = [BitVecVal(-1,max_field_size) for i in range(no_fields)]
+    # Reject when duplicate extracts are present on a path
+    fields_extracted = [False]*len(info.all_field_nos)
+    max_packet_size = entry.get_max_packet_size(0,fields_extracted,info,False)
 
-    default_phv = [BitVecVal(-1,max_field_size) for i in range(no_fields)]
-
-    default_phv_padded = [BitVecVal(-1,max_field_size) for i in range(no_fields)]
-
-    fields_extracted = [False]*no_fields
-
-    max_packet_size = entry.get_max_packet_size(0,fields_extracted,field_no_to_sizes_map)
-
-    packet = BitVec('x',max_packet_size)
     def spec(packet):
-        print("Entering spec function")
-        #TODO can we not do the cfg traversal everytime ? Any better way to get closure ? Ok for now
-        res_phv,res_state = entry.make_spec(cur_phv,default_phv,0,field_no_to_sizes_map,max_field_size,packet)
-        print("Exiting spec function")
+        res_phv,res_state = entry.make_spec(cur_phv,default_phv,0,info,drop_uncompared,max_field_size,packet)
         return res_phv,res_state
-        
-    phv, accept = (entry.make_spec(cur_phv,default_phv,0,field_no_to_sizes_map,max_field_size,packet))
-    for i, f in enumerate(phv):
-        print(f"field[{i}]:\n{f}")
-        print("\n\n\n")
-    print(f"accept:\n{accept}")
-    print()
-    print(field_no_to_sizes_map)
-    print(field_name_to_no_map)
-    print("max pkt sz=",max_packet_size)
-    print("max field sz= ", max_field_size)
-    return field_name_to_no_map,field_no_to_sizes_map,max_packet_size,default_phv_padded,spec,list(set(constants)),list(set(mask_constants)),ternary_match,max_field_size
+
+    return info,entry,max_packet_size,default_phv_padded,spec,list(set(constants)),list(set(mask_constants)),ternary_match,max_field_size,is_straight_line

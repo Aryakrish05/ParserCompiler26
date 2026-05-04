@@ -1,0 +1,25 @@
+struct h0 { bit_4 f0; };
+struct h1 { bit_4 f1; };
+struct h2 { bit_4 f2; };
+struct h3 { bit_4 f3; };
+
+struct {
+    struct h0 h0;
+    struct h1 h1;
+    struct h2 h2;
+    struct h3 h3;
+} phv;
+
+int parse() {
+    Extract(phv.h0);
+    if ((phv.h0.f0 & 6) == 4) {
+        Extract(phv.h1);
+        if ((phv.h0.f0 & 15) == 12) {
+            Extract(phv.h2);
+        }
+        else if ((phv.h0.f0 & 3) == 3) {
+            Extract(phv.h3);
+        }
+    }
+    return ACCEPT;
+}

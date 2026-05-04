@@ -1,0 +1,156 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%----------------------------------------------------------------------------------
+% DO NOT Change this is the required setting A4 page, 11pt, onside print, book style
+%%----------------------------------------------------------------------------------
+\documentclass[a4paper,11pt,oneside]{book} 
+\usepackage{CS_report} % DO NOT REMOVE THIS LINE. 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{amsthm}
+\newtheorem{definition}{Definition}
+
+\newtheorem{lemma}{Lemma}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem*{remark}{Remark}
+
+\usepackage{amsmath, amssymb}
+\usepackage{tcolorbox}
+\usepackage{enumitem}
+
+\newtcolorbox{constructionbox}[1]{
+  colback=white,
+  colframe=black,
+  title={Construction #1},
+  fonttitle=\bfseries,
+  sharp corners,
+  boxrule=0.5pt
+}
+
+\usepackage{enumitem}
+\setlist{nolistsep,leftmargin=*}
+
+\newcommand{\at}[1]{\textcolor{red}{#1}}
+\newcommand{\atlater}[1]{\textcolor{magenta}{#1}}
+
+% \newcommand{\medskip}[1]{\vspace{1em}{#1}}
+\newcommand{\fix}[1]{\textcolor{blue}{#1}}
+
+\newcommand{\adv}{\ensuremath{\mathcal{A}}}
+\newcommand{\db}{\ensuremath{\mathbf{X}}}
+\newcommand{\simu}{\ensuremath{\mathcal{S}}}
+\newcommand{\negl}{\ensuremath{\text{negl}}}
+\newcommand{\st}{\ensuremath{\mathsf{st}}}
+
+\setlength{\parindent}{0pt}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+
+    % \captionsetup[figure]{margin=1.5cm,font=small,name={Figure},labelsep=colon}
+    % \captionsetup[table]{margin=1.5cm,font=small,name={Table},labelsep=colon}
+    
+    \frontmatter
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    \begin{titlepage}      
+        \begin{center}
+            \includegraphics[width=3cm]{figures/iitmlogo.png}\\[0.5cm]
+            {\LARGE Indian Institute of Technology, Madras\\[0.5cm]
+            Department of Computer Science}\\[2cm]
+			%{\color{blue} \rule{\textwidth}{1pt}}
+			
+			% -------------------------------
+			% You need to edit some details here
+			% -------------------------------  
+
+                \linespread{1.2}\huge {
+                %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                %TODO: 1 TITLE of Your PROJECT 
+                %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                % change the following line                
+                CS4900 - UGRC Report
+            
+            }
+            \linespread{1}~\\[2cm]
+			%{\color{blue} \rule{\textwidth}{1pt}}
+            {\Large 
+                %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                %TODO: 2 YOUR NAME
+                %%%%%%%%%%%%%%%%%%%%%%%%%%%%             
+                % change the following line
+                Arya Krishnamurthy
+                % change end             
+            }\\[1cm] 
+            
+
+            {\large 
+                %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                %TODO: 3 YOUR NAME Supervisor's name(s)
+                %%%%%%%%%%%%%%%%%%%%%%%%%%%%             
+                % change the following line                
+                \emph{Supervisor:}  Dr. Srinivas N.G.}\\[1cm] % if applicable
+            
+    		% PLEASE DO NOT CHANGE THIS TEXT %
+            \large A report submitted as a requirement of\\ the Undergraduate Research Course (CS4900) offered by\\
+            %%%
+            %TODO:  verify your degree name
+            the department of Computer Science and Engineering \\
+            %% 
+            %TODO:  verify your degree in
+            at \textit{IIT Madras}\\[0.3cm] 
+            \vfill
+            
+            
+            \today % Please update this date you can use \date{April 2020} for fixed date
+        \end{center}
+    \end{titlepage}
+    
+    
+     
+    % -------------------------------------------------------------------
+    % Abstract
+    % -------------------------------------------------------------------
+    
+    \input{chapters/00_i_abstract}
+
+    % -------------------------------------------------------------------
+    % Acknowledgements
+    % -------------------------------------------------------------------
+    
+    % \input{chapters/00_ii_acknowledgments}
+
+    % -------------------------------------------------------------------
+    % Contents
+    % -------------------------------------------------------------------
+    
+    \tableofcontents
+
+
+    
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%                                                                    %%  
+    %%  Main chapters and sections of your project                        %%  
+    %%  Everything from here on needs updates in your own words and works %%
+    %%                                                                    %%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    \mainmatter
+    % Read for preparation of document in LaTex 
+    % Lamport, L. (1986), LATEX: A Document Preparation System, Addison-Wesley.
+    
+    \input{chapters/01_introduction}
+    \input{chapters/02_literature_review}
+    \input{chapters/03_design_and_implementation}
+    \input{chapters/04_past_work_and_context}
+    \input{chapters/05_conclusion_and_future_work}
+
+
+    
+
+    
+    % -------------------------------------------------------------------
+    % Bibliography/References  -  Harvard Style was used in this report
+    % -------------------------------------------------------------------
+    \bibliography{references}  %  Patashnik, O. (1988), BibTEXing. Documentation for general BibTEX users.
+    
+\end{document}

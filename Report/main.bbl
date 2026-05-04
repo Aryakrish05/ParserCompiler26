@@ -1,0 +1,45 @@
+\begin{thebibliography}{1}
+
+\bibitem{cegis_paper}
+Rajeev Alur, Rastislav Bod{\'i}k, Garvit Juniwal, Milo M.~K. Martin, Mukund
+  Raghothaman, Sanjit~A. Seshia, Rishabh Singh, Armando Solar-Lezama, Emina
+  Torlak, and Abhishek Udupa.
+\newblock Syntax-guided synthesis.
+\newblock In {\em Proceedings of the 2013 Formal Methods in Computer-Aided
+  Design (FMCAD)}, pages 1--8. IEEE, 2013.
+
+\bibitem{synth_primer}
+Rajeev Alur, Rishabh Singh, Dana Fisman, and Armando Solar-Lezama.
+\newblock Search-based program synthesis.
+\newblock {\em Communications of the ACM}, 61(12):84--93, 2018.
+
+\bibitem{pycparser}
+Eli Bendersky.
+\newblock pycparser: Complete c99 parser in pure python.
+\newblock \url{https://github.com/eliben/pycparser}, 2024.
+\newblock Accessed: 2026-05-03.
+
+\bibitem{parserhawk}
+Xiangyu Gao, Jiaqi Gao, Karan Kumar~G, Muhammad Haseeb, Ennan Zhai, Bili Dong,
+  Joseph Tassarotti, Srinivas Narayana, and Anirudh Sivaraman.
+\newblock {ParserHawk}: Hardware-aware parser generator using program
+  synthesis.
+\newblock In {\em Proceedings of the ACM SIGCOMM 2025 Conference}, SIGCOMM '25.
+  ACM, 2025.
+
+\bibitem{parsercompiler26_repo}
+Arya Krishnamurthy.
+\newblock Parsercompiler26: source code.
+\newblock \url{https://github.com/Aryakrish05/ParserCompiler26/tree/main},
+  2026.
+\newblock Accessed: 2026-05-04.
+
+\bibitem{z3_tutorial}
+{Microsoft}.
+\newblock Z3 guide: Programming with {Z3} in {Python}.
+\newblock
+  \url{https://microsoft.github.io/z3guide/programming/Z3\%20Python\%20-\%20Readonly/Introduction\#arithmetic},
+  2024.
+\newblock Accessed: 2026-05-01.
+
+\end{thebibliography}

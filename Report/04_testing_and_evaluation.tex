@@ -1,0 +1,185 @@
+\chapter{Testing and Evaluation}
+\label{ch:testing-evaluation}
+
+We tested the design by running each configuration on a set of
+hand-written parsers and reviewing the synthesised state machine for
+correctness. A small Python helper renders the synthesised state
+machine as a PDF, which made the manual review easier.
+
+We evaluate the design separately for input programs that use only
+exact comparisons and for programs that involve ternary
+comparisons since the supported configurations differ in the two
+cases. 
+
+\section{Exact comparisons}
+\label{sec:eval-exact}
+
+We ran five benchmarks with each of the following configurations.
+\texttt{max\_states} and \texttt{max\_table\_entries} were both set
+to ten. A timeout of 20 minutes was imposed on each run.
+
+\begin{enumerate}
+    \item Design~1 with constant synthesis and field minimisation.
+    \item Design~1 with field minimisation only.
+    \item Design~1 with constant synthesis only.
+    \item Design~1 with no optimisation.
+\end{enumerate}
+
+The same set of configurations was repeated for Design~2.
+
+Field minimisation was the most effective optimisation. It reduced
+the synthesis time to roughly half of the unminimised baseline on
+most benchmarks. Constant synthesis also produced a reasonable
+speedup, though the effect was smaller and varied more across
+benchmarks.
+We may also observe that for \texttt{check\_after\_extract1}, the
+second design produced an FSM with one state fewer, as expected.
+
+Table~\ref{tab:eval-exact-fieldsizes} reports the total field
+width across all PHV fields with and without field minimisation on
+these benchmarks. Table~\ref{tab:exact-results} reports the
+resulting state count, table-entry count and synthesis time for
+each configuration under both designs.
+
+\begin{table}[H]
+\centering
+\rowcolors{2}{blue!5}{white}
+\begin{tabular}{lcc}
+\hline
+\rowcolor{blue!20}
+\textbf{Benchmark} & \textbf{field min.\ on (bits)} & \textbf{field min.\ off (bits)} \\
+\hline
+\texttt{linear}                 & 3 & 48 \\
+\texttt{single\_if}             & 3 & 40 \\
+\texttt{single\_if\_elif\_else} & 4 & 56 \\
+\texttt{multiple\_if}           & 5 & 72 \\
+\texttt{check\_after\_extract1} & 4 & 48 \\
+\texttt{check\_after\_extract2} & 6 & 80 \\
+\hline
+\end{tabular}
+\caption{Total field width across all PHV fields with and without
+field minimisation, on the exact-comparison benchmarks.}
+\label{tab:eval-exact-fieldsizes}
+\end{table}
+
+\begin{table}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{l|cc|ccc|ccc}
+\hline
+\rowcolor{blue!20}
+\textbf{Benchmark} & \textbf{CS} & \textbf{FM}
+& \multicolumn{3}{c|}{\textbf{Design 1}}
+& \multicolumn{3}{c}{\textbf{Design 2}} \\
+\rowcolor{blue!20}
+ & & & \textbf{States} & \textbf{Entries} & \textbf{Time (s)}
+     & \textbf{States} & \textbf{Entries} & \textbf{Time (s)} \\
+\hline
+\texttt{linear}                 & on  & off & 3 & 0 & 1.23   & 3 & 0 & 2.44    \\
+\texttt{linear}                 & on  & on  & 3 & 0 & 0.43   & 3 & 0 & 0.24    \\
+\texttt{linear}                 & off & off & 3 & 0 & 1.44   & 3 & 0 & 1.84    \\
+\texttt{linear}                 & off & on  & 3 & 0 & 0.45   & 3 & 0 & 0.19    \\
+\hline
+\texttt{single\_if}             & on  & off & 3 & 1 & 68.08  & 3 & 1 & 51.89   \\
+\texttt{single\_if}             & on  & on  & 3 & 1 & 14.86  & 3 & 1 & 21.98   \\
+\texttt{single\_if}             & off & off & 3 & 1 & 55.11  & 3 & 1 & 50.49   \\
+\texttt{single\_if}             & off & on  & 3 & 1 & 11.18  & 3 & 1 & 23.41   \\
+\hline
+\texttt{check\_after\_extract1} & on  & off & 4 & 2 & 132.97 & 4 & 2 & 164.23  \\
+\texttt{check\_after\_extract1} & on  & on  & 4 & 2 & 35.47  & 4 & 2 & 144.92  \\
+\texttt{check\_after\_extract1} & off & off & 4 & 2 & 159.22 & 4 & 2 & 279.61  \\
+\texttt{check\_after\_extract1} & off & on  & 4 & 2 & 39.28  & 4 & 2 & 133.84  \\
+\hline
+\texttt{single\_if\_elif\_else} & on  & off & 5 & 3 & 669.05 & 5 & 3 & 631.46  \\
+\texttt{single\_if\_elif\_else} & on  & on  & 5 & 3 & 195.05 & 5 & 3 & 458.28  \\
+\texttt{single\_if\_elif\_else} & off & off & 5 & 3 & 866.20 & - & - & timeout \\
+\texttt{single\_if\_elif\_else} & off & on  & 5 & 3 & 65.64  & 5 & 3 & 91.88   \\
+\hline
+\texttt{multiple\_if}           & on  & off & 7 & 3 & 931.27 & 6 & 2 & 557.88  \\
+\texttt{multiple\_if}           & on  & on  & 7 & 3 & 339.76 & 6 & 2 & 249.91  \\
+\texttt{multiple\_if}           & off & off & 7 & 3 & 696.18 & 6 & 2 & 652.19  \\
+\texttt{multiple\_if}           & off & on  & 7 & 3 & 421.73 & 6 & 2 & 330.57  \\
+\hline
+\end{tabular}%
+}
+\caption{Synthesis results on the exact-comparison benchmarks
+across all four \textsf{CS}/\textsf{FM} configurations, under both
+designs. \textsf{CS} stands for constant synthesis and \textsf{FM}
+for field minimisation. A dash indicates that the configuration
+timed out within 1200\,s.}
+\label{tab:exact-results}
+\end{table}
+
+\clearpage
+\section{Ternary comparisons}
+\label{sec:eval-ternary}
+
+Only Design~2 supports ternary comparisons, as discussed in
+Section~\ref{sec:synthesis}, so we evaluated it with two
+configurations: field minimisation on, and field minimisation off.
+Field minimisation was applied only on the fields that participate
+in exact comparisons or in no comparison at all. Fields involved in
+ternary comparisons were left untouched.
+
+A timeout of 20 minutes was imposed on each run. The benchmarks
+were run with eight states and eight table entries as the maximum.
+Table~\ref{tab:eval-ternary-fieldsizes} reports the maximum bit width of a packet.
+Table~\ref{tab:eval-ternary} reports the resulting state count,
+table-entry count and synthesis time. A dash indicates that the
+configuration timed out.
+
+\begin{table}[!ht]
+\centering
+\rowcolors{2}{blue!5}{white}
+\begin{tabular}{lcc}
+\hline
+\rowcolor{blue!20}
+\textbf{Benchmark} & \textbf{field min.\ on (bits)} & \textbf{field min.\ off (bits)} \\
+\hline
+\texttt{single\_if\_else}      & 6  & 12  \\
+\texttt{multiple\_if}          & 9  & 28  \\
+\texttt{check\_after\_extract} & 10 & 48  \\
+\texttt{nested\_if\_else2}     & 6  & 12  \\
+\texttt{nested\_if\_else1}     & 11 & 104 \\
+\hline
+\end{tabular}
+\caption{Maximum bit width of a packet with and without
+field minimisation, on the ternary benchmarks.}
+\label{tab:eval-ternary-fieldsizes}
+\end{table}
+
+\begin{table}[!ht]
+\centering
+\rowcolors{2}{blue!5}{white}
+\begin{tabular}{lcccc}
+\hline
+\rowcolor{blue!20}
+\textbf{Benchmark} & \textbf{Field min.} & \textbf{States} & \textbf{Entries} & \textbf{Time (s)} \\
+\hline
+\texttt{single\_if\_else}      & on  & 4 & 1 & 18.85   \\
+\texttt{single\_if\_else}      & off & 4 & 1 & 18.55   \\
+\texttt{multiple\_if}          & on  & 4 & 3 & 432.67  \\
+\texttt{multiple\_if}          & off & 4 & 3 & 484.76  \\
+\texttt{check\_after\_extract} & on  & 4 & 2 & 79.64   \\
+\texttt{check\_after\_extract} & off & 4 & 2 & 206.32  \\
+\texttt{nested\_if\_else2}     & on  & 4 & 2 & 56.29   \\
+\texttt{nested\_if\_else2}     & off & 4 & 2 & 64.38   \\
+\texttt{nested\_if\_else1}     & on  & 6 & 3 & 602.07  \\
+\texttt{nested\_if\_else1}     & off & - & - & timeout \\
+\hline
+\end{tabular}
+\caption{Synthesis results on ternary benchmarks with Design~2.
+Field minimisation was applied only on fields that do not
+participate in ternary comparisons.}
+\label{tab:eval-ternary}
+\end{table}
+
+The state and table-entry counts match across the two
+configurations for every benchmark that completed and the run with 
+field minimisation on runs faster always.
+The speedup from field minimisation is substantial
+on \texttt{check\_after\_extract} and \texttt{nested\_if\_else1}.
+On \texttt{nested\_if\_else1} the minimised configuration completes
+in about ten minutes while the unminimised one times out.
+
+

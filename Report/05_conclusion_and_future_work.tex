@@ -1,0 +1,43 @@
+\chapter{Conclusion and Future Work}
+\label{ch:conclusion}
+
+We have thus built a pipeline which takes a C-like sequential packet
+parsing code and produces a state machine as a P4 parser using program
+synthesis. The source code is available at~\cite{parsercompiler26_repo}.
+
+\section{Limitations}
+\label{sec:limitations}
+
+Our design has a few limitations:
+\begin{enumerate}
+    \item The DSL is very restrictive. It only allows extracts,
+    no lookaheads, no conditions involving \texttt{\&\&} or
+    \texttt{||}, and no cross-packet state. All of these would be
+    desirable in some cases for packet processing.
+
+    \item We have ignored the difference between the byte order in
+    network packets and the way structs are stored in memory.
+
+    \item Bitmask handling doesn't scale well. See the Class~3 case
+    in Section~\ref{sec:field-size-min} and the ``alternative we
+    considered'' subsection in the IRGenerator.
+
+    \item The state machine produced doesn't necessarily have the
+    minimum number of states.
+\end{enumerate}
+
+\section{Future Work}
+
+To build on this work:
+\begin{enumerate}
+    \item Extend the design to overcome the limitations above.
+
+    \item Develop a more efficient method to handle bitmasks and automate the drop-and-stitch optimisation.
+    
+    \item Investigate better synthesis analyses to improve
+    performance and scalability.
+
+    \item Use these ideas for further analyses to enable vector
+    processing, in particular handling the control flow divergence
+    that arises due to parsing.
+\end{enumerate}

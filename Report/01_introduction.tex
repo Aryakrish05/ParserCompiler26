@@ -1,0 +1,117 @@
+% NOTE: Compile main.tex, not this file directly, to ensure all styles and packages are loaded.
+
+\chapter{Introduction}
+\label{ch:introduction}
+
+\section{Background}
+\label{sec:background}
+A network packet is a stream of bytes which consists of a sequence of headers and a payload. The sequence of headers is not the same for all packets as multiple protocols may be followed in a network. Parsing involves identifying the sequence of headers in a packet and is the first step of any packet processing pipeline.
+
+Parsing involves reading (extracting) headers one after another each of which indicates which header to continue parsing next or finish parsing and accept or reject the packet. It can be seen that parsing is simulating a FSM where the field extracted in each state indicates which state to proceed to next.
+
+Packet processing code today is written using C(for software packet processors) or using P4(for hardware packet processors). Parsers in P4 directly map to FSMs while the control flow in C code implicitly encodes a FSM. A packet-processing program in C and its P4 equivalent are shown in
+Figure~\ref{fig:c-vs-p4}. Only the parsing part is shown for brevity. It can be observed that P4 has a separate ingress processing block, while in
+C the processing is inline with the parser. However, we may do prior analyses to split the parsing and processing parts, and so in this project
+we consider only the parsing part of the C code.
+\section{Motivation}
+\label{sec:motivation}
+Sequential C code cannot directly be used to program hardware and it is also not the best representation for analyses involving control flow divergence due to parsing. A FSM or the mapped P4 version achieve both these objectives better.
+It would thus be beneficial to automatically convert sequential C-like code to an equivalent FSM represented in P4. We want both the synthesised FSM and the input C-like code to extract the same set of headers for any given packet and make the same final decision of accepting or rejecting the packet.
+\section{Objectives}
+\label{sec:objectives}
+\begin{enumerate}
+    \item Study program synthesis techniques commonly used in formal verification
+    \item Design a restricted C-like DSL which represents realistic parsers
+    \item Build a pipeline to automatically convert the input code to an equivalent FSM in P4 using program synthesis
+\end{enumerate}
+
+\section{Scope of the Study}
+\label{sec:scope}
+The DSL is restricted in some ways: it doesn't allow loops or arbitrary branch conditions, and is purely sequential with no support for function calls. It  also doesn't support lookahead: only the fields of headers which are extracted can be branched on and variable length fields are not allowed. However, these features are very rare in parsers and our DSL would be useful for many real-life network parsers.
+
+\begin{figure}[!ht]
+\centering
+\begin{minipage}[b]{0.47\textwidth}
+\begin{lstlisting}[style=codeside, language=C]
+struct ethernet_t {
+    unsigned char  dst[6];
+    unsigned char  src[6];
+    unsigned short ether_type;
+};
+
+struct ipv4_t { /* fields */ };
+struct arp_t  { /* fields */ };
+
+int process(unsigned char *ptr) {
+    struct ethernet_t ethhdr;
+    struct ipv4_t     ipv4;
+    struct arp_t      arp;
+
+    ethhdr = *((struct ethernet_t *)ptr);
+    ptr   += sizeof(struct ethernet_t);
+
+    if (ethhdr.ether_type == 0x0800) {
+        ipv4 = *((struct ipv4_t *)ptr);
+        ptr += sizeof(struct ipv4_t);
+        /* further processing */
+        return ACCEPT;
+    } else if (ethhdr.ether_type
+               == 0x0806) {
+        arp = *((struct arp_t *)ptr);
+        ptr += sizeof(struct arp_t);
+        return REJECT;
+    }
+    /*further processing*/
+    return ACCEPT;
+}
+\end{lstlisting}
+\subcaption{A packet processing program in C.}
+\label{lst:c-parser}
+\end{minipage}\hfill
+\begin{minipage}[b]{0.47\textwidth}
+\begin{lstlisting}[style=codeside, language=C]
+header ethernet_t {
+    bit<48> dst_addr;
+    bit<48> src_addr;
+    bit<16> ether_type;
+}
+
+header ipv4_t { /* fields */ }
+header arp_t  { /* fields */ }
+
+struct headers_t {
+    ethernet_t ethernet;
+    ipv4_t     ipv4;
+    arp_t      arp;
+}
+
+parser my_parser(packet_in packet,
+                 out headers_t hd,
+                 ...) {
+    state start {
+        packet.extract(hd.ethernet);
+        transition select(
+                hd.ethernet.ether_type) {
+            0x0800:  parse_ipv4;
+            0x0806:  parse_arp;
+            default: accept;
+        }
+    }
+    state parse_ipv4 {
+        packet.extract(hd.ipv4);
+        transition accept;
+    }
+    state parse_arp {
+        packet.extract(hd.arp);
+        transition reject;
+    }
+}
+/*further processing*/
+\end{lstlisting}
+\subcaption{Equivalent program in P4.}
+\label{lst:p4-parser}
+\end{minipage}
+\caption{The same packet-processing program shown in both C and P4. Unnecessary details omitted for clarity.}
+\label{fig:c-vs-p4}
+\end{figure}
+

@@ -1,0 +1,44 @@
+\chapter{Literature Review}
+\label{ch:literature}
+
+\section{Z3}
+\label{sec:lit-z3}
+
+Z3~\cite{z3_tutorial} is a Satisfiability Modulo Theories (SMT)
+solver developed by Microsoft. SMT extends boolean satisfiability
+(SAT) by allowing constraints over richer theories such as
+bit-vectors, integers and arrays. Internally, Z3 uses CDCL
+(Conflict-Driven Clause Learning) to decide satisfiability of
+formulas in these theories. DPLL (Davis-Putnam-Logemann-Loveland)
+is a classical backtracking algorithm for SAT that combines case
+splitting with unit propagation. CDCL extends DPLL by analysing
+each conflict during the search and learning a new clause from it,
+which prunes the future search by preventing revisits to similar
+dead-ends. We used Z3's Python API (Z3py) to encode our
+specifications and the Z3 documentation was referred to often
+throughout the project.
+
+\section{CEGIS}
+\label{sec:lit-cegis}
+
+The Syntax-Guided Synthesis paper~\cite{cegis_paper} and the
+Search-Based Program Synthesis primer~\cite{synth_primer} provide
+a simple walkthrough of CEGIS. They served as our introduction to
+CEGIS and provided the foundations for understanding the
+ParserHawk paper. To get more familiar with these concepts, we
+built a small CEGIS-based toy DSL which infers a function from a
+logical specification. The code for this is present in our GitHub
+repository~\cite{parsercompiler26_repo}.
+
+\section{ParserHawk}
+\label{sec:lit-parserhawk}
+
+ParserHawk~\cite{parserhawk} is the main reference for our project.
+It solves a similar synthesis problem for parsers, but converts P4
+code into a TCAM-based implementation. The problem it solves is
+different from the problem described before: 
+it compiles P4 parsing code to be used in hardware, while we convert
+sequential C-like code into a FSM (similar to the output
+of ParserHawk) and then back to P4. ParserHawk was very useful in
+inspiring ideas which shaped our project, mainly the synthesis
+encoding (Section~\ref{sec:synthesis}) and logical specification construction.

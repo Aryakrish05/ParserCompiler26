@@ -1,0 +1,122 @@
+\documentclass[12pt,a4paper]{report}
+
+% --- Core packages ---
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{url}
+\usepackage{setspace}
+\usepackage{titlesec}
+\usepackage{subcaption}
+\usepackage{comment}
+\usepackage{geometry}
+\usepackage{hyperref}
+
+% --- Code listings ---
+\usepackage{listings}
+\usepackage[table]{xcolor}
+
+\lstdefinestyle{codeside}{
+    basicstyle=\ttfamily\small,
+    keywordstyle=\bfseries\color{blue},
+    commentstyle=\itshape\color{gray},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    breaklines=true,
+    breakatwhitespace=true,
+    captionpos=b,
+    columns=fullflexible,
+    keepspaces=true,
+    xleftmargin=0.5em,
+    xrightmargin=0.5em,
+    numbers=none,
+    frame=none,
+}
+
+% --- TikZ ---
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, shapes, backgrounds}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+
+% --- Page geometry and chapter formatting ---
+\geometry{top=0.3in, bottom=1in, left=1in, right=1in}
+\titleformat{\chapter}[block]{\Large\bfseries}{\thechapter.}{1em}{}
+
+\makeatletter
+\def\@makechapterhead#1{%
+  \vspace*{10pt}%
+  {\parindent \z@ \raggedright \normalfont
+    \Large\bfseries \thechapter.\quad #1\par\nobreak\vspace{10pt}}}
+\def\@makeschapterhead#1{%
+  \vspace*{10pt}%
+  {\parindent \z@ \raggedright \normalfont
+    \Large\bfseries #1\par\nobreak\vspace{10pt}}}
+\makeatother
+
+\begin{document}
+
+% --- Title page ---
+\begin{titlepage}
+    \begin{center}
+        \includegraphics[width=3cm]{Figures/iitmlogo.png}\\[0.5cm]
+        {\LARGE Indian Institute of Technology, Madras\\[0.5cm]
+        Department of Computer Science}\\[2cm]
+
+        \linespread{1.2}\huge {
+            CS4900 - UGRC Report
+        }
+        \linespread{1}~\\[2cm]
+
+        {\Large Arya Krishnamurthy}\\[1cm]
+
+        {\large \emph{Supervisor:}~ Dr. Srinivas N.G.}\\[1cm]
+
+        \large A report submitted as a requirement of\\
+        the Undergraduate Research Course (CS4900) offered by\\
+        the department of Computer Science and Engineering\\
+        at \textit{IIT Madras}\\[0.3cm]
+        \vfill
+
+        \today
+    \end{center}
+\end{titlepage}
+
+% --- Front matter (roman page numbers) ---
+\pagenumbering{roman}
+\input{00_i_abstract}
+\tableofcontents
+
+% --- Body (arabic page numbers) ---
+\pagenumbering{arabic}
+\input{01_introduction}
+\input{02_literature_review}
+\input{03_design_and_implementation}
+\input{04_testing_and_evaluation}
+\input{05_conclusion_and_future_work}
+
+% --- References ---
+\bibliographystyle{plain}
+\bibliography{references}
+
+\chapter*{Acknowledgement of LLM Usage}
+LLMs were helpful in the final stages of this project. They were
+used in the following ways.
+
+\begin{enumerate}
+    \item Formatting the report in LaTeX and producing the diagrams
+    and tables in it.
+    \item Rapid prototyping of ideas added in the final stage,
+    mainly to check the applicability of the FieldRestorer
+    optimisations. The LLM was not able to produce a working
+    implementation of the optimisation, and that code has not been
+    added to the GitHub repository.
+    \item Writing PowerShell scripts to run the benchmarks.
+    \item Writing a few small functions in the final design that
+    involved Python features I was not familiar with, such
+    as the \texttt{re} module and some additional file-handling
+    operations.
+    \item Generating the boilerplate code that follows the
+    synthesised parser in the P4 output, such as the ingress and
+    egress processing blocks.
+\end{enumerate}
+\end{document}

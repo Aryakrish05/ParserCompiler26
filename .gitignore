@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+
+_build/
+doctest-output/
+*.gv
+*.gv.pdf
+
+benchmarks/**/*.p4
+benchmarks/**/*.pc
+benchmarks/**/*.csv
+benchmarks/**/*.tex

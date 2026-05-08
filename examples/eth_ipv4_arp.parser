@@ -1,0 +1,32 @@
+struct ethernet_t {
+    bit_48 dst;
+    bit_48 src;
+    bit_16 ether_type;
+};
+
+struct ipv4_t {
+    bit_32 src_ip;
+};
+
+struct arp_t {
+    bit_32 sender_ip;
+};
+
+struct {
+    struct ethernet_t ethernet;
+    struct ipv4_t ipv4;
+    struct arp_t arp;
+} phv;
+
+int parse() {
+    Extract(phv.ethernet);
+    if (phv.ethernet.ether_type == 2048) {
+        Extract(phv.ipv4);
+        return ACCEPT;
+    }
+    else if (phv.ethernet.ether_type == 2054) {
+        Extract(phv.arp);
+        return REJECT;
+    }
+    return ACCEPT;
+}

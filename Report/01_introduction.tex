@@ -9,14 +9,14 @@ A network packet is a stream of bytes which consists of a sequence of headers an
 
 Parsing involves reading (extracting) headers one after another each of which indicates which header to continue parsing next or finish parsing and accept or reject the packet. It can be seen that parsing is simulating a FSM where the field extracted in each state indicates which state to proceed to next.
 
-Packet processing code today is written using C(for software packet processors) or using P4(for hardware packet processors). Parsers in P4 directly map to FSMs while the control flow in C code implicitly encodes a FSM. A packet-processing program in C and its P4 equivalent are shown in
-Figure~\ref{fig:c-vs-p4}. Only the parsing part is shown for brevity. It can be observed that P4 has a separate ingress processing block, while in
+Packet processing code today is written using C(for software packet processors) or using P4(for hardware packet processors). Parsers in P4 directly map to FSMs whereas the control flow in C code implicitly encodes a FSM. A packet-processing program in C and its P4 equivalent are shown in
+Figure~\ref{fig:c-vs-p4}. Only the parsing details are shown for brevity. It can be observed that P4 has separate blocks for parsing and processing whereas in
 C the processing is inline with the parser. However, we may do prior analyses to split the parsing and processing parts, and so in this project
 we consider only the parsing part of the C code.
 \section{Motivation}
 \label{sec:motivation}
 Sequential C code cannot directly be used to program hardware and it is also not the best representation for analyses involving control flow divergence due to parsing. A FSM or the mapped P4 version achieve both these objectives better.
-It would thus be beneficial to automatically convert sequential C-like code to an equivalent FSM represented in P4. We want both the synthesised FSM and the input C-like code to extract the same set of headers for any given packet and make the same final decision of accepting or rejecting the packet.
+It would thus be beneficial to automatically convert sequential C-like code to an equivalent FSM represented in P4. We want both the synthesised FSM and the input C-like code to extract the same sequence of headers for any given packet and make the same final decision of accepting or rejecting the packet.
 \section{Objectives}
 \label{sec:objectives}
 \begin{enumerate}
@@ -29,7 +29,7 @@ It would thus be beneficial to automatically convert sequential C-like code to a
 \label{sec:scope}
 The DSL is restricted in some ways: it doesn't allow loops or arbitrary branch conditions, and is purely sequential with no support for function calls. It  also doesn't support lookahead: only the fields of headers which are extracted can be branched on and variable length fields are not allowed. However, these features are very rare in parsers and our DSL would be useful for many real-life network parsers.
 
-\begin{figure}[!ht]
+\begin{figure}[H]
 \centering
 \begin{minipage}[b]{0.47\textwidth}
 \begin{lstlisting}[style=codeside, language=C]

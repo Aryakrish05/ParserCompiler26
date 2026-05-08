@@ -1,9 +1,0 @@
-int parse () {
-     Extract(field0_v_0,1);
-     if(field0_v_0==0)
-     {
-         Extract(field1_v_3,1);
-     }
-     Extract(tail_field2_1,1);
-     return ACCEPT;
- }

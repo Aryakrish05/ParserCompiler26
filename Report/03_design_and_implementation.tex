@@ -13,15 +13,15 @@ Only one function is allowed: \texttt{int parse()}, which takes no arguments and
 
 For \texttt{if-else} statements, we allow conditions of two kinds: exact matches, represented by \texttt{phv.<header>.<field>~==~<constant>}, and ternary matches, represented by \texttt{(phv.<header>.<field>~\&~<mask>)~==~<value>}. No other forms are supported (no \texttt{\&\&}, \texttt{||}, or compound conditions).
 
-Every path in \texttt{parse()} is required to end with \texttt{return ACCEPT} or \texttt{return REJECT}, mirroring the C convention of stating the final accept/reject decision.
+Every path in \texttt{parse()} is required to end with \texttt{return ACCEPT} or \texttt{return REJECT}, stating the final accept/reject decision.
 
 As in C and P4, headers or header types which are not declared previously cannot be used. Such programs are invalid \texttt{.parser} code and are rejected.
 
 The DSL equivalent of the C parser from Figure~\ref{fig:c-vs-p4} is shown in Figure~\ref{fig:dsl-example}.
 
-\begin{figure}[!ht]
+\begin{figure}[H]
 \centering
-\begin{minipage}{0.6\textwidth}
+\begin{minipage}{0.55\textwidth}
 \begin{lstlisting}[style=codeside, language=C]
 struct ethernet_t {
     bit_48 dst;
@@ -61,7 +61,7 @@ int parse() {
 
 \begin{figure}[H]
 \centering
-\resizebox{\textwidth}{!}{%
+\resizebox{0.65\textwidth}{!}{%
 \begin{tikzpicture}[
     box/.style={draw, rectangle, rounded corners,
                 minimum height=0.85cm, minimum width=2.3cm,
@@ -142,17 +142,17 @@ This stage consists of the CFGBuilder and the SpecBuilder. It also collects info
 
 \subsection*{Synthesis}
 
-The STMSynthesiser takes the specification produced by the SpecBuilder and synthesises the state machine. It uses a CEGIS loop and constrains the search to a tabular representation of the FSM. 
-This restricted format is what allows the synthesis to remain tractable on realistic parsers.
+The STMSynthesiser takes the specification produced by the SpecBuilder and synthesises the FSM. It uses a CEGIS loop and constrains the search to a tabular representation of the FSM. 
+This restricted format is what allows the synthesis to remain tractable.
 
 \subsection*{Backend}
 
 The backend consists of two modules:
 
 \begin{itemize}
-    \item \textbf{FieldRestorer:} Undoes the size and value transformations applied by the FieldMinimiser, so that the synthesised state machine refers to the original fields and constants from the input.
+    \item \textbf{FieldRestorer:} Undoes the size and value transformations applied by the FieldMinimiser so that the synthesised FSM refers to the original fields and constants from the input.
 
-    \item \textbf{P4Generator:} Walks the restored state machine and emits the final P4 code, which is accepted as a valid parser by \texttt{p4c}.
+    \item \textbf{P4Generator:} Emits the final P4 code from the synthesised FSM which is accepted as a valid parser by \texttt{p4c}.
 \end{itemize}
 
 \section{Frontend}
@@ -178,7 +178,7 @@ A program that fails any of these checks raises with CompilationError.
 \label{sec:field-size-min}
 
 FieldMinimiser operates on the Info produced by the Analyser and aims to reduce field sizes as much as possible while
-making sure that the state machine produced by synthesis is either the same as the
+making sure that the FSM produced by synthesis is either the same as the
 one we would have got without the optimisation, or any difference should be predictable and it
 can be corrected later during code generation.
 
@@ -189,8 +189,7 @@ typically contain wide fields that play no role in branching: for
 instance, the 48-bit destination MAC in the Ethernet header is not used in
 any comparison. Maintaining their full widths unnecessarily enlarges the synthesis problem.
 
-The restrictions on the DSL are what make these optimisations possible.
-In particular, the restriction that every condition is over a single field.
+The restrictions on the DSL make these field size minimisation optimisations easily achievable.
 
 Every field in a header is either uncompared, compared only with exact
 matches (\texttt{field == value}), or compared with at least one ternary
@@ -200,19 +199,20 @@ match. These three classes are handled separately.
 
 There are two sub-cases:
 \begin{itemize}
-    \item \textbf{The struct contains at least one compared field.} The
+    \item \textbf{The struct they belong to contains at least one compared field.} These
     uncompared fields are dropped for the sake of synthesis. The DSL
-    always extracts a struct as a whole and the final P4 code does the
+    always extracts a struct as a whole and the final P4 code also does the
     same, so these fields need not be considered in the synthesiser.
 
-    \item \textbf{The struct contains no compared fields.} Such a struct
+    \item \textbf{The struct they belong to contains no compared fields.} Such a struct and its fields
     cannot be dropped directly: it still has to be extracted at runtime to
     advance the packet pointer correctly and dropping it would lose the
     evidence that the extraction actually happens. Instead, we treat the whole
-    struct as a single 1-bit field during synthesis. Assigning the field to have 
+    struct as a single field of size 1 during synthesis. 
     a size of 0 is incorrect. An alternative approach, where such
     structs are dropped entirely for the synthesis and stitched back at
-    code generation, is discussed in the FieldRestorer.
+    code generation, is discussed in
+    Section~\ref{sec:drop-and-stitch}.
 \end{itemize}
 
 \subsubsection*{Class 2: fields with only exact matches}
@@ -234,10 +234,10 @@ multi-field conditions.
 
 \subsubsection*{Class 3: fields with ternary matches}
 
-Ternary matches are more difficult to handle. A single bit position can take
-part in more than one mask, so the renumbering approach from Class~2 does
-not apply. Swapping bit values would break some of the masked
-conditions.
+Ternary matches are more difficult to handle. A single
+field can satisfy a subset of the match conditions present in the program 
+so the renumbering approach from Class~2 is not applicable. 
+
 
 We considered two heuristics, neither of which gives a strong guarantee:
 \begin{itemize}
@@ -261,7 +261,7 @@ Ternary matches are rare in practical parsing programs, so a more advanced treat
 The IRGenerator emits the IR as a \texttt{.pc} file instead of directly
 constructing the CFG. This is because the
 specification-construction and synthesis stages of the pipeline were written
-first and they used \texttt{.pc} as input and produced the state-machine
+first and they used \texttt{.pc} as input and produced the FSM
 output as a table. The frontend and the backend were written later. The
 IRGenerator emits \texttt{.pc} to avoid making unnecessary changes in the
 specification generation phase.
@@ -280,7 +280,7 @@ for the following changes in \texttt{.pc} programs:
     Although such cases are rare, we preferred to have a correctness
     guarantee while renaming.
 
-    \item The widths of the fields and the constants have been modified based by the 
+    \item The widths of the fields and the constants have been modified by the 
     FieldMinimiser.
 
     \item Each extract contains the size of the field being extracted along with the name
@@ -289,13 +289,13 @@ for the following changes in \texttt{.pc} programs:
 
 The \texttt{.pc} program corresponding to the running example
 (Figure~\ref{fig:dsl-example}) is shown in Figure~\ref{fig:pc-example}.
-\begin{figure}[!ht]
+\begin{figure}[H]
 \centering
 \begin{minipage}{0.6\textwidth}
 \begin{lstlisting}[style=codeside, language=C]
 
 int parse() {
-    Extract(ethernet_ether_type_0,2);
+    Extract(ethernet_ether_type_0,3);
     if (ethernet_ether_type_0 == 0) {
         Extract(ipv4_<first_field>_1,1);
         return ACCEPT;
@@ -319,7 +319,7 @@ The transformations that produced this output are:
     dropped (Class 1a).
     \item \texttt{ether\_type} is compared against two constants
     (\texttt{0x0800} and \texttt{0x0806}), which are renumbered to
-    \texttt{0} and \texttt{1}. The field is shrunk from size \texttt{16} to size \texttt{2} (Class 2).
+    \texttt{0} and \texttt{1}. The field is shrunk from size \texttt{16} to size \texttt{3} (Class 2).
     \item \texttt{ipv4} and \texttt{arp} have no compared fields, so both
     are shrunk to single \texttt{1} bit fields named using their
     first declared field (Class 1b).
@@ -337,19 +337,8 @@ is considered below.
 Instead of handling each field separately, we considered merging the
 whole header into one wide field and lifting all per-field comparisons
 into masked comparisons over this combined field. In principle, this could
-reduce the number of states needed.
-
-This approach has two drawbacks:
-\begin{itemize}
-    \item The number of distinct mask-value pairs needed can grow as
-    $O\!\left(\prod_i k_i\right)$, where $k_i$ is the number of
-    conditions on the $i$-th subfield. This blows up quickly.
-
-    \item It inherits the ternary handling problem from Class~3.
-\end{itemize}
-
-For these reasons, we did not pursue this approach.
-
+reduce the number of states needed but this inherits the ternary handling problem 
+from Class~3 and thus we did not pursue this approach.
 
 \section{Specification Construction}
 \label{sec:spec-construction}
@@ -360,7 +349,7 @@ Section~\ref{sec:pipeline-overview}.
 
 \subsection{CFGBuilder}
 
-Apart from constructing the CFG, the CFGBuilder also performs some
+Apart from constructing the CFG, the CFGBuilder also performs
 additional validation on the input. It rejects programs which have any
 of the following bugs:
 \begin{itemize}
@@ -375,9 +364,9 @@ A program that fails any of these checks raises with
 The CFG produced for the running example (Figure~\ref{fig:pc-example})
 is shown in Figure~\ref{fig:cfg-example}.
 
-\begin{figure}[!ht]
+\begin{figure}[H]
 \centering
-\resizebox{0.85\textwidth}{!}{%
+\resizebox{0.55\textwidth}{!}{%
 \begin{tikzpicture}[
     every node/.style={font=\scriptsize, align=center},
     entry/.style  ={draw, rectangle, rounded corners, fill=gray!15,
@@ -438,7 +427,7 @@ bit-vector can ever be equal to the default. This is useful in the
 synthesis stage.
 
 The specification is built using a recursive walk over the CFG,
-starting at the entry node with a packet pointer at the first bit
+starting at the entry node with a packet pointer(\texttt{ptr}) at the first bit
 that hasn't been extracted. At every node we carry a current PHV
 (\texttt{cur\_phv}). This is a list of expressions for the values of
 the fields on the current path. At the entry node, every entry of
@@ -448,7 +437,8 @@ The specification construction happens during backtracking:
 
 \begin{itemize}
     \item At an \texttt{ExitNode}, we return a copy of the default
-    PHV along with the True/False bit recorded on this node.
+    PHV along with a True/False expression based on whether the node is 
+    an accept/reject node.
 
     \item At an \texttt{ExtractNode} for field \texttt{fno} of size
     \texttt{sz}, we set
@@ -476,35 +466,35 @@ the synthesiser. For the running example
 (Figure~\ref{fig:cfg-example}), the specification is:
 
 \begin{lstlisting}[style=codeside, language=C]
-ether_type = ZeroExt(1, Extract(1, 0, packet))
-ipv4       = If(ZeroExt(1, Extract(1, 0, packet)) == 0,
-                ZeroExt(2, Extract(2, 2, packet)),
+ether_type = ZeroExt(1, Extract(2, 0, packet))
+ipv4       = If(ZeroExt(1, Extract(2, 0, packet)) == 0,
+                ZeroExt(3, Extract(3, 3, packet)),
                 default)
-arp        = If(ZeroExt(1, Extract(1, 0, packet)) == 0,
+arp        = If(ZeroExt(1, Extract(2, 0, packet)) == 0,
                 default,
-                If(ZeroExt(1, Extract(1, 0, packet)) == 1,
-                   ZeroExt(2, Extract(2, 2, packet)),
+                If(ZeroExt(1, Extract(2, 0, packet)) == 1,
+                   ZeroExt(3, Extract(3, 3, packet)),
                    default))
-state      = If(ZeroExt(1, Extract(1, 0, packet)) == 0,
+state      = If(ZeroExt(1, Extract(2, 0, packet)) == 0,
                 True,
-                If(ZeroExt(1, Extract(1, 0, packet)) == 1,
+                If(ZeroExt(1, Extract(2, 0, packet)) == 1,
                    False,
                    True))
 \end{lstlisting}
 
-where \texttt{default} is the bit-vector \texttt{100} in binary. The
-largest field after minimisation is of size 2, so
-\texttt{maximum\_field\_size+1} = 3 bits.
+where \texttt{default} is the bit-vector \texttt{1000} in binary.
+The largest field after minimisation is of size 3, so
+\texttt{maximum\_field\_size+1} = 4 bits.
 
 
 \section{Synthesis}
 \label{sec:synthesis}
 
 This is where the logical formula constructed in the previous phase
-is used to run a CEGIS loop and synthesise the state machine as a
+is used to run a CEGIS loop and synthesise the FSM as a
 table.
 
-The design of the state machine is inspired by the P4 parser state
+The design of the FSM is inspired by the P4 parser state
 machine described in Figure~\ref{fig:c-vs-p4}. We considered two
 designs that differ in a small way. We describe the first design in
 detail in this section and briefly mention how the second design is 
@@ -513,31 +503,32 @@ different.
 \subsection{First Design}
 
 This design works only for programs with exact comparisons and is less general than the 
-second design, but we describe it in detail because it 
-motivates the second design and also enables a powerful
-optimisation in the FieldRestorer.
+second design, but we describe it in detail because it
+motivates the second design and also enables the drop-and-stitch
+optimisation discussed in Section~\ref{sec:drop-and-stitch}.
 
-The state machine is expressed as a table. Each state has a default
+The FSM is expressed as a table. Each state has a default
 field which it extracts and branches on, and a default next state
 which is taken when none of the listed transitions are satisfied.
 Apart from this, there is a list of transition entries, each of the
 form \texttt{(current\_state, match\_value, next\_state)}.
 
-When making state transition, the field extracted in that
+When making a state transition, the field extracted in that
 state is compared against all the transition entries for that state. 
 The matching entry is used to perform the transition. Since only
 exact comparisons are involved, at most one entry can match and if none of them
 matches the default transition is taken.
 
 The synthesis itself is a CEGIS loop with two components: a
-Generator and a Verifier. The Generator produces state machines compliant with the
+Generator and a Verifier. The Generator produces FSMs compliant with the
 counterexamples seen so far. 
 The Verifier checks if it satisfies the specification for
-every possible input packet by trying to a counterexample. 
+every possible input packet by trying to find a counterexample. 
 Each counterexample is added as a fresh correctness
 constraint to the Generator and the loop continues 
 until the Verifier finds no
-counterexample for the synthesised state machine. 
+counterexample for the synthesised FSM or until the Generator cannot synthesise 
+an FSM satisfying the constraints. 
 The two have similar designs, so we describe the
 Generator only. We run a fresh CEGIS loop for each candidate
 \texttt{(table\_size, no\_states)} pair and take the first state
@@ -562,15 +553,15 @@ table:
 \end{itemize}
 
 In addition to these structural constraints, the Generator encodes
-the symbolic simulation of the state machine and the per-packet
+the symbolic simulation of the FSM and the per-packet
 correctness constraints.
 
-We simulate the state machine by repeatedly applying the transition,
+We simulate the FSM by repeatedly applying the transition,
 starting from \texttt{cur\_state = 0},
 \texttt{cur\_packet\_ptr = 0}, and \texttt{cur\_phv} set to the
 default values. The ordering constraint above forces the synthesised
-state machine to be loopless. We accept this restriction since
-the input programs are loopless as well. In such a state machine applying transitions
+FSM to be loopless. We accept this restriction since
+the input programs are loopless as well. In such a FSM applying transitions
 for \texttt{no\_states} steps is enough to reach accept or reject.
 
 A transition takes
@@ -618,7 +609,7 @@ next_state = If(g, entry_next_state[idx], next_state)
 \end{lstlisting}
 
 \textbf{4. Bounds check.} For every \texttt{(s, f, p)} with
-\texttt{p + sz > max\_packet\_size}: \textbf{change to >= here and < previously ??}
+\texttt{p + sz > max\_packet\_size}:
 \begin{lstlisting}[style=codeside, language=C]
 g = (cur_state == s) and (default_field[s] == f)
                      and (cur_packet_ptr == p)
@@ -628,6 +619,59 @@ next_state = If(g, reject, next_state)
 For each input packet (a bit-vector constant) added during the CEGIS
 loop, the correctness constraint checks whether the final state and PHV match
 the specification after \texttt{no\_states} simulation steps.
+
+To illustrate, the synthesised FSM for the running
+example's \texttt{.pc} program (Figure~\ref{fig:pc-example}) is
+shown in Figure~\ref{fig:running-stm-fd}. Three states and two
+table entries suffice.
+
+\begin{figure}[H]
+\centering
+\begin{minipage}{0.62\textwidth}
+\centering
+\footnotesize
+\begin{tabular}{c l c c}
+\hline
+State & Default field & Entries (val $\to$ next) & Default next \\
+\hline
+0 & \texttt{ethernet\_ether\_type\_0} & $0 \to 1$, $1 \to 2$ & accept \\
+1 & \texttt{ipv4\_<f>\_1}             &                       & accept \\
+2 & \texttt{arp\_<f>\_2}              &                       & reject \\
+\hline
+\end{tabular}
+\end{minipage}
+\hfill
+\begin{minipage}{0.32\textwidth}
+\centering
+\begin{tikzpicture}[
+    every node/.style={font=\scriptsize, align=center},
+    state/.style ={draw, circle, fill=blue!12, minimum size=0.7cm},
+    accept/.style ={draw, rectangle, rounded corners, fill=green!20,
+                    minimum height=0.6cm, minimum width=1.1cm},
+    reject/.style ={draw, rectangle, rounded corners, fill=red!18,
+                    minimum height=0.6cm, minimum width=1.1cm},
+    arr/.style={->, >=Stealth, thick},
+    elabel/.style={font=\tiny, fill=white, inner sep=1pt}
+]
+\node[state]  (s0)  at ( 0,    0)   {0};
+\node[state]  (s1)  at (-1.4, -1.3) {1};
+\node[state]  (s2)  at ( 1.4, -1.3) {2};
+\node[accept] (acc) at ( 0,   -2.6) {Accept};
+\node[reject] (rej) at ( 1.4, -2.6) {Reject};
+
+\draw[arr] (s0) -- node[elabel] {0}    (s1);
+\draw[arr] (s0) -- node[elabel] {1}    (s2);
+\draw[arr] (s0) -- node[elabel] {def.} (acc);
+\draw[arr] (s1) -- (acc);
+\draw[arr] (s2) -- (rej);
+\end{tikzpicture}
+\end{minipage}
+\caption{The synthesised FSM for the running example's
+\texttt{.pc} program for the first design. Left: the state-table
+representation. Right: the corresponding state-transition graph.
+State numbers in the graph match the rows of the table.}
+\label{fig:running-stm-fd}
+\end{figure}
 
 \subsubsection*{Limitations of the first design}
 
@@ -673,7 +717,7 @@ where only the outer mask is satisfied. These cannot be encoded as
 transitions from a single state without enforcing a priority between
 them. The priority could be expressed naturally (transitions checked
 first having higher priority), but we did not pursue this. A
-state machine with priority-ordered transitions is not standard, and
+FSM with priority-ordered transitions is not standard, and
 a parser is typically expected to have at most one matching
 transition at every state.
 
@@ -712,9 +756,9 @@ these checks possible.
 Since we iterate over the number of table entries and the number of
 states, we will not encounter table entries that don't make sense.
 If there is no table entry for a state, the default transition is
-taken on every visit. We ignore the default field in this case as it doesn't matter.
+taken for every value of the field. 
 We would also have to run an additional graph traversal algorithm to find the state 
-which extracts the field after the synthesis as the state machine itself doesn't 
+which extracts the field after the synthesis as the FSM itself doesn't 
 explicitly mention whether a particular state performs an extraction or not.  
 
 It can be seen that both of the problems of the original state
@@ -756,37 +800,36 @@ roles have been summarised in Section~\ref{sec:pipeline-overview}.
 The FieldRestorer reverses the transformations done by the
 FieldMinimiser. The \texttt{Info} class produced by the frontend
 contains all the information needed for this. It remembers the
-original bit-widths of the fields and the renumbering of the
+original bit-widths of the fields and the original
 constants. The FieldRestorer reads from \texttt{Info} and maps
 every entry of the synthesised state-machine table back to its
 original form.
 
 \subsection{P4Generator}
 
-The P4Generator walks the restored state machine and emits the
+The P4Generator walks the restored FSM and emits the
 final P4 code. P4 allows only the extraction of whole headers, not
-field by field. The synthesised state machine extracts one field
+field by field. The synthesised FSM extracts one field
 per state, so the P4Generator groups the per-field extracts of the
 same header into a single \texttt{packet.extract(hd.<header>)}
 call. This is done by a simple graph traversal that identifies,
 for each header, the state that extracts its first field. That
 state then emits the whole-header extract in the P4 output.
 
-This grouping is especially important for the second design. In
-that design, fields of a header may not be extracted in the same
-order they appear in the source program, so the grouping is what
-reconstructs a valid P4 parser.
+This grouping is especially important for the second design as there may be fields which 
+perform no extractions.
 
 \subsection{Drop-and-stitch optimisation}
+\label{sec:drop-and-stitch}
 
 We discussed in Section~\ref{sec:field-size-min} that headers
 which have none of their fields used in any comparison may be
 dropped completely from the synthesis and stitched back into the
-state machine afterwards. This is the optimisation referred to
+FSM afterwards. This is the optimisation referred to
 there. We believe it is easiest to apply with the first design.
 
 Realistic parsers tend to stop branching after extracting transport
-protocol headers, and most of their conditions are exact matches.
+protocol headers, and all of the branching conditions are mostly exact matches.
 In such parsers, most of the headers are uncompared. Dropping them
 from the input before synthesis reduces the number of states the
 synthesiser has to deal with significantly.
@@ -820,8 +863,9 @@ through the program reach Accept with the same observable
 behaviour, so the synthesiser produces the straight-line state
 machine in Figure~\ref{fig:dropped-stm}.
 
-\begin{figure}[!ht]
+\begin{figure}[H]
 \centering
+\resizebox{0.6\textwidth}{!}{%
 \begin{tikzpicture}[
     every node/.style={font=\scriptsize, align=center},
     extract/.style={draw, rectangle, rounded corners, fill=blue!12,
@@ -835,8 +879,9 @@ machine in Figure~\ref{fig:dropped-stm}.
 \node[accept]  (acc) at (7.5,0) {Accept};
 \draw[arr] (s0) -- (s1);
 \draw[arr] (s1) -- (acc);
-\end{tikzpicture}
-\caption{The synthesised state machine after dropping
+\end{tikzpicture}%
+}
+\caption{The synthesised FSM after dropping
 \texttt{hdr2}, \texttt{hdr4} and \texttt{hdr5} from the input.}
 \label{fig:dropped-stm}
 \end{figure}
@@ -847,16 +892,18 @@ the missing transitions. From the CFG, different values of
 extractions, so the single outgoing transition out of the state
 extracting \texttt{hdr0.field0} is split into three: one each for
 \texttt{== 3}, \texttt{== 4} and default. The state extracting
-\texttt{hdr1.field1} is then replicated across the \texttt{== 3}
-and \texttt{== 4} branches, since the two branches go on to
-extract different headers (\texttt{hdr4} on one, \texttt{hdr5} on
-the other). \texttt{hdr2} appears in multiple places in the
-stitched machine for similar reasons. The final state machine is
+\texttt{hdr1.field1} is replicated across all three branches, since
+\texttt{hdr1} is extracted on every path through the original
+program. The \texttt{== 3} and \texttt{== 4} replicas branch
+further on \texttt{hdr1.field1} (going on to extract \texttt{hdr4}
+on one and \texttt{hdr5} on the other), while the default replica
+does not branch. \texttt{hdr2} appears in multiple places in the
+stitched machine for similar reasons. The final FSM is
 shown in Figure~\ref{fig:stitched-stm}.
 
-\begin{figure}[!ht]
+\begin{figure}[H]
 \centering
-\resizebox{0.85\textwidth}{!}{%
+\resizebox{0.6\textwidth}{!}{%
 \begin{tikzpicture}[
     every node/.style={font=\scriptsize, align=center},
     extract/.style={draw, rectangle, rounded corners, fill=blue!12,
@@ -868,6 +915,7 @@ shown in Figure~\ref{fig:stitched-stm}.
 ]
 \node[extract] (s0)   at ( 0,    0)   {Extract \texttt{hdr0.field0}};
 \node[extract] (s1a)  at (-4,   -1.5) {Extract \texttt{hdr1.field1}};
+\node[extract] (s1c)  at ( 0,   -1.5) {Extract \texttt{hdr1.field1}};
 \node[extract] (s1b)  at ( 4,   -1.5) {Extract \texttt{hdr1.field1}};
 \node[extract] (s2_4) at (-5.5, -3)   {Extract \texttt{hdr2}};
 \node[extract] (s2_5) at ( 5.5, -3)   {Extract \texttt{hdr2}};
@@ -878,11 +926,12 @@ shown in Figure~\ref{fig:stitched-stm}.
 
 \draw[arr] (s0)  -- node[elabel] {\texttt{== 3}}  (s1a);
 \draw[arr] (s0)  -- node[elabel] {\texttt{== 4}}  (s1b);
-\draw[arr] (s0)  -- node[elabel] {default}        (s2d);
+\draw[arr] (s0)  -- node[elabel] {default}        (s1c);
 \draw[arr] (s1a) -- node[elabel] {\texttt{== 2}}  (s2_4);
 \draw[arr] (s1a) -- node[elabel] {default}        (s2d);
 \draw[arr] (s1b) -- node[elabel] {\texttt{== 5}}  (s2_5);
 \draw[arr] (s1b) -- node[elabel] {default}        (s2d);
+\draw[arr] (s1c) -- (s2d);
 \draw[arr] (s2_4) -- (sh4);
 \draw[arr] (s2_5) -- (sh5);
 \draw[arr] (s2d)  -- (acc);
@@ -890,15 +939,15 @@ shown in Figure~\ref{fig:stitched-stm}.
 \draw[arr] (sh5)  -- (acc);
 \end{tikzpicture}%
 }
-\caption{The state machine after stitching back \texttt{hdr2},
+\caption{The FSM after stitching back \texttt{hdr2},
 \texttt{hdr4} and \texttt{hdr5}. The state extracting \texttt{hdr2}
 on the default paths is shared.}
 \label{fig:stitched-stm}
 \end{figure}
 
-This stitched state machine is equivalent to what the synthesiser
+This stitched FSM is equivalent to what the synthesiser
 would have produced if the uncompared headers had been kept, but
-is obtained much faster. The stitching procedure is mechanical and
+is obtained much faster. We believe that the stitching procedure
 can be fully automated. It would be a useful extension to make the
 pipeline practical on larger parsers, where the synthesis problem
 with all fields kept becomes intractable.

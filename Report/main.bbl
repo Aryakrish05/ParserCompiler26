@@ -34,6 +34,13 @@ Arya Krishnamurthy.
   2026.
 \newblock Accessed: 2026-05-04.
 
+\bibitem{cdcl_handbook}
+Jo{\~a}o Marques-Silva, In{\^e}s Lynce, and Sharad Malik.
+\newblock Conflict-driven clause learning {SAT} solvers.
+\newblock In Armin Biere, Marijn Heule, Hans van Maaren, and Toby Walsh,
+  editors, {\em Handbook of Satisfiability}, volume 185 of {\em Frontiers in
+  Artificial Intelligence and Applications}, pages 131--153. IOS Press, 2009.
+
 \bibitem{z3_tutorial}
 {Microsoft}.
 \newblock Z3 guide: Programming with {Z3} in {Python}.

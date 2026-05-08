@@ -1,8 +1,0 @@
-int parse () {
-     Extract(h_type_3,1);
-     if(h_type_3==0)
-     {
-         Extract(p_d_4,1);
-     }
-     return ACCEPT;
- }

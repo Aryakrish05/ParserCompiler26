@@ -9,24 +9,24 @@
 \contentsline {section}{\numberline {2.3}ParserHawk}{4}{section.2.3}%
 \contentsline {chapter}{\numberline {3}Research Design and Implementation}{5}{chapter.3}%
 \contentsline {section}{\numberline {3.1}DSL Design}{5}{section.3.1}%
-\contentsline {section}{\numberline {3.2}Pipeline Overview}{5}{section.3.2}%
+\contentsline {section}{\numberline {3.2}Pipeline Overview}{6}{section.3.2}%
 \contentsline {section}{\numberline {3.3}Frontend}{7}{section.3.3}%
 \contentsline {subsection}{\numberline {3.3.1}Analyser}{7}{subsection.3.3.1}%
-\contentsline {subsection}{\numberline {3.3.2}FieldMinimiser}{8}{subsection.3.3.2}%
+\contentsline {subsection}{\numberline {3.3.2}FieldMinimiser}{7}{subsection.3.3.2}%
 \contentsline {subsection}{\numberline {3.3.3}IRGenerator}{9}{subsection.3.3.3}%
 \contentsline {section}{\numberline {3.4}Specification Construction}{10}{section.3.4}%
 \contentsline {subsection}{\numberline {3.4.1}CFGBuilder}{10}{subsection.3.4.1}%
-\contentsline {subsection}{\numberline {3.4.2}SpecBuilder}{11}{subsection.3.4.2}%
-\contentsline {section}{\numberline {3.5}Synthesis}{12}{section.3.5}%
-\contentsline {subsection}{\numberline {3.5.1}First Design}{12}{subsection.3.5.1}%
+\contentsline {subsection}{\numberline {3.4.2}SpecBuilder}{10}{subsection.3.4.2}%
+\contentsline {section}{\numberline {3.5}Synthesis}{11}{section.3.5}%
+\contentsline {subsection}{\numberline {3.5.1}First Design}{11}{subsection.3.5.1}%
 \contentsline {subsection}{\numberline {3.5.2}Second Design}{14}{subsection.3.5.2}%
 \contentsline {section}{\numberline {3.6}Backend}{15}{section.3.6}%
 \contentsline {subsection}{\numberline {3.6.1}FieldRestorer}{15}{subsection.3.6.1}%
 \contentsline {subsection}{\numberline {3.6.2}P4Generator}{15}{subsection.3.6.2}%
-\contentsline {subsection}{\numberline {3.6.3}Drop-and-stitch optimisation}{16}{subsection.3.6.3}%
-\contentsline {chapter}{\numberline {4}Testing and Evaluation}{18}{chapter.4}%
-\contentsline {section}{\numberline {4.1}Exact comparisons}{18}{section.4.1}%
-\contentsline {section}{\numberline {4.2}Ternary comparisons}{20}{section.4.2}%
-\contentsline {chapter}{\numberline {5}Conclusion and Future Work}{21}{chapter.5}%
-\contentsline {section}{\numberline {5.1}Limitations}{21}{section.5.1}%
-\contentsline {section}{\numberline {5.2}Future Work}{21}{section.5.2}%
+\contentsline {subsection}{\numberline {3.6.3}Drop-and-stitch optimisation}{15}{subsection.3.6.3}%
+\contentsline {chapter}{\numberline {4}Testing and Evaluation}{17}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Exact comparisons}{17}{section.4.1}%
+\contentsline {section}{\numberline {4.2}Ternary comparisons}{19}{section.4.2}%
+\contentsline {chapter}{\numberline {5}Conclusion and Future Work}{20}{chapter.5}%
+\contentsline {section}{\numberline {5.1}Limitations}{20}{section.5.1}%
+\contentsline {section}{\numberline {5.2}Future Work}{20}{section.5.2}%

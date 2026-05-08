@@ -8,14 +8,15 @@ Z3~\cite{z3_tutorial} is a Satisfiability Modulo Theories (SMT)
 solver developed by Microsoft. SMT extends boolean satisfiability
 (SAT) by allowing constraints over richer theories such as
 bit-vectors, integers and arrays. Internally, Z3 uses CDCL
-(Conflict-Driven Clause Learning) to decide satisfiability of
-formulas in these theories. DPLL (Davis-Putnam-Logemann-Loveland)
-is a classical backtracking algorithm for SAT that combines case
-splitting with unit propagation. CDCL extends DPLL by analysing
-each conflict during the search and learning a new clause from it,
-which prunes the future search by preventing revisits to similar
-dead-ends. We used Z3's Python API (Z3py) to encode our
-specifications and the Z3 documentation was referred to often
+(Conflict-Driven Clause Learning)~\cite{cdcl_handbook} to decide
+satisfiability of formulas in these theories. DPLL
+(Davis-Putnam-Logemann-Loveland) is a classical backtracking
+algorithm for SAT that combines case splitting with unit
+propagation. CDCL extends DPLL by analysing each conflict during
+the search and learning a new clause from it, which prunes the
+future search by preventing revisits to similar dead-ends. 
+We used Z3's Python API (Z3py) for the project 
+and the Z3 documentation was referred to often
 throughout the project.
 
 \section{CEGIS}
@@ -34,11 +35,10 @@ repository~\cite{parsercompiler26_repo}.
 \label{sec:lit-parserhawk}
 
 ParserHawk~\cite{parserhawk} is the main reference for our project.
-It solves a similar synthesis problem for parsers, but converts P4
-code into a TCAM-based implementation. The problem it solves is
-different from the problem described before: 
-it compiles P4 parsing code to be used in hardware, while we convert
+It also solves a synthesis problem for parsers but compiles P4
+code into a TCAM-based hardware implementation. The problem it solves is
+different from that of our work as we convert
 sequential C-like code into a FSM (similar to the output
-of ParserHawk) and then back to P4. ParserHawk was very useful in
+of ParserHawk in some ways) and then back to P4. ParserHawk was very useful in
 inspiring ideas which shaped our project, mainly the synthesis
-encoding (Section~\ref{sec:synthesis}) and logical specification construction.
+encoding and logical specification construction.

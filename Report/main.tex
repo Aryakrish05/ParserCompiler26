@@ -16,7 +16,7 @@
 \usepackage[table]{xcolor}
 
 \lstdefinestyle{codeside}{
-    basicstyle=\ttfamily\small,
+    basicstyle=\ttfamily\scriptsize,
     keywordstyle=\bfseries\color{blue},
     commentstyle=\itshape\color{gray},
     stringstyle=\color{red},
@@ -67,9 +67,10 @@
         }
         \linespread{1}~\\[2cm]
 
-        {\Large Arya Krishnamurthy}\\[1cm]
+        {\Large Arya Krishnamurthy}\\[0.3cm]
+        {\large CS23B008}\\[1cm]
 
-        {\large \emph{Supervisor:}~ Dr. Srinivas N.G.}\\[1cm]
+        {\large \emph{Faculty Advisor:}~ Dr. Srinivas N.G.}\\[1cm]
 
         \large A report submitted as a requirement of\\
         the Undergraduate Research Course (CS4900) offered by\\
@@ -100,16 +101,15 @@
 
 \chapter*{Acknowledgement of LLM Usage}
 LLMs were helpful in the final stages of this project. They were
-used in the following ways.
+used in the following ways:
 
 \begin{enumerate}
     \item Formatting the report in LaTeX and producing the diagrams
     and tables in it.
     \item Rapid prototyping of ideas added in the final stage,
     mainly to check the applicability of the FieldRestorer
-    optimisations. The LLM was not able to produce a working
-    implementation of the optimisation, and that code has not been
-    added to the GitHub repository.
+    optimisations. However, The LLM was not able to produce an optimal working
+    implementation of the optimisation.
     \item Writing PowerShell scripts to run the benchmarks.
     \item Writing a few small functions in the final design that
     involved Python features I was not familiar with, such
